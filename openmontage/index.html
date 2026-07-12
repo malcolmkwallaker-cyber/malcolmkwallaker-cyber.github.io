@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenMontage — Overview &amp; Field Notes</title>
+<meta name="description" content="An independent overview and hands-on review of OpenMontage, the open-source agentic video production system.">
+<style>
+  :root {
+    --bg: #f7f7f5;
+    --surface: #ffffff;
+    --text: #1d1d1f;
+    --muted: #5c5c66;
+    --accent: #6d4fc4;
+    --accent-soft: #ece7fa;
+    --border: #e2e2e8;
+    --code-bg: #f0f0f4;
+    --good: #1a7f4e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16161a;
+      --surface: #1f1f26;
+      --text: #ececf1;
+      --muted: #a0a0ae;
+      --accent: #a68bff;
+      --accent-soft: #2b2440;
+      --border: #33333e;
+      --code-bg: #26262f;
+      --good: #4cc38a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+  header.hero {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 2rem;
+    margin-bottom: 2.5rem;
+  }
+  .kicker {
+    display: inline-block;
+    font-size: .78rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: var(--accent-soft);
+    border-radius: 999px;
+    padding: .25rem .75rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
+  }
+  h1 { font-size: clamp(1.9rem, 4.5vw, 2.6rem); margin: 0 0 .5rem; line-height: 1.15; }
+  .subtitle { color: var(--muted); font-size: 1.1rem; max-width: 40rem; margin: 0 0 1.25rem; }
+  .repo-link {
+    display: inline-block;
+    font-weight: 600;
+    color: var(--accent);
+    text-decoration: none;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: 8px;
+    padding: .5rem 1rem;
+  }
+  .repo-link:hover { border-color: var(--accent); }
+  h2 { font-size: 1.4rem; margin: 2.75rem 0 .75rem; }
+  h3 { font-size: 1.05rem; margin: 1.5rem 0 .4rem; }
+  p { margin: .6rem 0; }
+  a { color: var(--accent); }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: .75rem;
+    margin: 1.5rem 0 0;
+  }
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: .9rem 1rem;
+  }
+  .stat .num { font-size: 1.35rem; font-weight: 700; }
+  .stat .lbl { font-size: .8rem; color: var(--muted); }
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: .9rem;
+    margin: 1rem 0;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem 1.1rem;
+  }
+  .card h3 { margin: 0 0 .35rem; font-size: 1rem; }
+  .card p { margin: 0; font-size: .92rem; color: var(--muted); }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: .9rem 1.1rem;
+    overflow-x: auto;
+    font-size: .88rem;
+  }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  p code, li code {
+    background: var(--code-bg);
+    border-radius: 4px;
+    padding: .1rem .35rem;
+    font-size: .88em;
+  }
+  ul { padding-left: 1.3rem; }
+  li { margin: .3rem 0; }
+  .pill-row { display: flex; flex-wrap: wrap; gap: .5rem; margin: 1rem 0; padding: 0; list-style: none; }
+  .pill-row li {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: .3rem .85rem;
+    font-size: .85rem;
+    margin: 0;
+  }
+  .table-scroll { overflow-x: auto; margin: 1rem 0; }
+  table { border-collapse: collapse; width: 100%; font-size: .92rem; }
+  th, td { text-align: left; padding: .55rem .8rem; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; }
+  .note {
+    background: var(--accent-soft);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: .8rem 1.1rem;
+    margin: 1.25rem 0;
+    font-size: .95rem;
+  }
+  .check { color: var(--good); font-weight: 700; margin-right: .4rem; }
+  footer {
+    margin-top: 3.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: .85rem;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <span class="kicker">Field Notes</span>
+  <h1>OpenMontage</h1>
+  <p class="subtitle">An independent overview and hands-on look at the open-source project that turns an AI coding assistant into a full video production studio.</p>
+  <a class="repo-link" href="https://github.com/calesthio/OpenMontage">calesthio/OpenMontage on GitHub →</a>
+  <div class="stats">
+    <div class="stat"><div class="num">37.2k</div><div class="lbl">GitHub stars</div></div>
+    <div class="stat"><div class="num">12</div><div class="lbl">Production pipelines</div></div>
+    <div class="stat"><div class="num">115</div><div class="lbl">Python tool modules</div></div>
+    <div class="stat"><div class="num">156</div><div class="lbl">Agent skill files</div></div>
+    <div class="stat"><div class="num">AGPLv3</div><div class="lbl">License</div></div>
+  </div>
+</header>
+
+<h2>What it is</h2>
+<p>OpenMontage is an <strong>agentic video production system</strong>: you clone the repo, open it in Claude Code, Cursor, Copilot, Windsurf, or Codex, and the assistant follows the project's instruction files to run end-to-end video workflows — research, scripting, scene planning, asset generation, editing, and final composition.</p>
+<p>The unusual part is the architecture. There is no Python orchestrator. The repo's own docs put it plainly: <em>"The AI agent IS the intelligence. Python exists only for tools and persistence."</em> Orchestration, creative decisions, review, and stage transitions all live in instructions — YAML pipeline manifests plus markdown "skills" the agent reads before each stage.</p>
+
+<h2>How it works</h2>
+<pre><code>Agent reads pipeline manifest (YAML)
+  → reads stage director skill (Markdown)
+  → uses tools (Python BaseTool subclasses)
+  → self-reviews (meta skill)
+  → checkpoints
+  → presents to human for approval</code></pre>
+<p>Knowledge is organized in three layers: the <strong>tool registry</strong> declares what exists (capabilities, cost, status), <strong>project skills</strong> teach OpenMontage's conventions, and <strong>vendored tech skills</strong> explain how each underlying API actually works. Every production request runs through a pipeline state machine — <code>idea → script → scene_plan → assets → edit → compose → publish</code> — with enforced human approval gates at the proposal, script, asset, and publish stages.</p>
+
+<div class="cards">
+  <div class="card"><h3>Works free out of the box</h3><p>Piper TTS, open archival footage (Archive.org, NASA, Wikimedia), and the Remotion composition engine need no API keys.</p></div>
+  <div class="card"><h3>Optional paid providers</h3><p>FAL (Veo, Kling, FLUX), Runway, HeyGen, ElevenLabs, OpenAI, Google, xAI, and stock APIs like Pexels plug in via a <code>.env</code> file.</p></div>
+  <div class="card"><h3>Budget governance</h3><p>Cost estimates precede execution; spend caps and per-action approval thresholds are managed by a dedicated cost tracker.</p></div>
+  <div class="card"><h3>Backlot live board</h3><p>A local FastAPI dashboard shows asset generation, approval gates, and cost tracking in real time.</p></div>
+  <div class="card"><h3>Real footage, not slideshows</h3><p>The documentary pipeline builds edits from real motion footage; pre-compose validation blocks renders with critical "slideshow risk."</p></div>
+  <div class="card"><h3>Local GPU option</h3><p><code>make install-gpu</code> enables free local models like WAN 2.1, Hunyuan, and CogVideo.</p></div>
+</div>
+
+<h2>The twelve pipelines</h2>
+<ul class="pill-row">
+  <li>Talking head</li>
+  <li>Animated explainer</li>
+  <li>Screen demo</li>
+  <li>Clip factory</li>
+  <li>Podcast repurpose</li>
+  <li>Cinematic</li>
+  <li>Animation</li>
+  <li>Character animation</li>
+  <li>Hybrid</li>
+  <li>Avatar spokesperson</li>
+  <li>Localization &amp; dub</li>
+  <li>Documentary montage</li>
+</ul>
+<p>Each pipeline is a declarative YAML manifest in <code>pipeline_defs/</code> defining stages, tools, review focus, and approval gates, paired with seven stage-director skills that teach the agent how to run each phase.</p>
+
+<h2>What it costs to run</h2>
+<div class="table-scroll">
+<table>
+  <thead><tr><th>Example from the project</th><th>Format</th><th>Reported cost</th></tr></thead>
+  <tbody>
+    <tr><td>"The Last Banana"</td><td>60-second animated short</td><td>$1.33</td></tr>
+    <tr><td>"VOID — Neural Interface"</td><td>Product ad</td><td>$0.69</td></tr>
+    <tr><td>"Afternoon in Candyland"</td><td>12-image animation</td><td>$0.15</td></tr>
+    <tr><td>"Library at Alexandria"</td><td>70-second scene composition</td><td>$0.02</td></tr>
+  </tbody>
+</table>
+</div>
+
+<h2>Getting started</h2>
+<p>Prerequisites: Python 3.10+, Node.js 18+, FFmpeg, and an AI coding assistant.</p>
+<pre><code>git clone https://github.com/calesthio/OpenMontage.git
+cd OpenMontage
+make setup</code></pre>
+<p>Then open the folder in your assistant and ask for a video — the assistant picks up <code>CLAUDE.md</code> (or the Cursor/Copilot/Windsurf equivalent), which routes it through <code>AGENT_GUIDE.md</code>, the project's operating contract. API keys are optional and only expand the provider menu; copy <code>.env.example</code> to <code>.env</code> to add them.</p>
+
+<h2>Field notes from a hands-on inspection</h2>
+<p>Because this project works by having your AI assistant follow instructions from the repo, it deserved a trust check before recommending it. A clone-and-read review of the current <code>main</code> branch found:</p>
+<ul>
+  <li><span class="check">✓</span><strong>Clean instruction files.</strong> <code>CLAUDE.md</code> and the 46&nbsp;KB <code>AGENT_GUIDE.md</code> are a legitimate operating contract — pipeline routing rules, tool-selection discipline, and a "decision communication" requirement that the agent announce provider, model, and cost before any paid call. A scan for prompt-injection patterns, hidden exfiltration, and obfuscated payloads came up empty.</li>
+  <li><span class="check">✓</span><strong>Boring, safe setup.</strong> The Makefile creates a venv and runs <code>pip install</code> / <code>npm install</code> — no piping remote scripts to a shell.</li>
+  <li><span class="check">✓</span><strong>Small core dependency footprint.</strong> The base <code>requirements.txt</code> is about a dozen mainstream packages (Pydantic, FastAPI, Pillow, provider SDKs).</li>
+  <li><span class="check">✓</span><strong>Guardrails are real.</strong> Approval gates are enforced by checkpoint tooling rather than left to the agent's discretion, and budget reservation happens before spend.</li>
+</ul>
+<div class="note">
+  Standard caveat for any agent-first project: instructions can change between releases, so it's worth re-skimming <code>AGENT_GUIDE.md</code> after pulling updates, and running the agent with the least permissions it needs. Also note the AGPLv3 license — if you build a hosted service on top of it, the source-sharing obligations apply.
+</div>
+
+<footer>
+  Independent notes based on the public repository as of July 2026. Not affiliated with the OpenMontage project. Source: <a href="https://github.com/calesthio/OpenMontage">github.com/calesthio/OpenMontage</a>.
+</footer>
+
+</div>
+</body>
+</html>
