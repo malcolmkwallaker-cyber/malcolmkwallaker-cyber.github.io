@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Superpowers — Overview &amp; Field Notes</title>
+<meta name="description" content="An independent overview and hands-on review of Superpowers, the open-source agentic skills framework and software-development methodology for coding agents.">
+<style>
+  :root {
+    --bg: #f7f7f5;
+    --surface: #ffffff;
+    --text: #1d1d1f;
+    --muted: #5c5c66;
+    --accent: #6d4fc4;
+    --accent-soft: #ece7fa;
+    --border: #e2e2e8;
+    --code-bg: #f0f0f4;
+    --good: #1a7f4e;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #16161a;
+      --surface: #1f1f26;
+      --text: #ececf1;
+      --muted: #a0a0ae;
+      --accent: #a68bff;
+      --accent-soft: #2b2440;
+      --border: #33333e;
+      --code-bg: #26262f;
+      --good: #4cc38a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 2.5rem 1.25rem 4rem; }
+  header.hero {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 2rem;
+    margin-bottom: 2.5rem;
+  }
+  .kicker {
+    display: inline-block;
+    font-size: .78rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: var(--accent-soft);
+    border-radius: 999px;
+    padding: .25rem .75rem;
+    margin-bottom: 1rem;
+    font-weight: 600;
+  }
+  h1 { font-size: clamp(1.9rem, 4.5vw, 2.6rem); margin: 0 0 .5rem; line-height: 1.15; }
+  .subtitle { color: var(--muted); font-size: 1.1rem; max-width: 40rem; margin: 0 0 1.25rem; }
+  .repo-link {
+    display: inline-block;
+    font-weight: 600;
+    color: var(--accent);
+    text-decoration: none;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: 8px;
+    padding: .5rem 1rem;
+  }
+  .repo-link:hover { border-color: var(--accent); }
+  h2 { font-size: 1.4rem; margin: 2.75rem 0 .75rem; }
+  h3 { font-size: 1.05rem; margin: 1.5rem 0 .4rem; }
+  p { margin: .6rem 0; }
+  a { color: var(--accent); }
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: .75rem;
+    margin: 1.5rem 0 0;
+  }
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: .9rem 1rem;
+  }
+  .stat .num { font-size: 1.35rem; font-weight: 700; }
+  .stat .lbl { font-size: .8rem; color: var(--muted); }
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: .9rem;
+    margin: 1rem 0;
+  }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem 1.1rem;
+  }
+  .card h3 { margin: 0 0 .35rem; font-size: 1rem; }
+  .card p { margin: 0; font-size: .92rem; color: var(--muted); }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: .9rem 1.1rem;
+    overflow-x: auto;
+    font-size: .88rem;
+  }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  p code, li code {
+    background: var(--code-bg);
+    border-radius: 4px;
+    padding: .1rem .35rem;
+    font-size: .88em;
+  }
+  ul { padding-left: 1.3rem; }
+  li { margin: .3rem 0; }
+  .pill-row { display: flex; flex-wrap: wrap; gap: .5rem; margin: 1rem 0; padding: 0; list-style: none; }
+  .pill-row li {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: .3rem .85rem;
+    font-size: .85rem;
+    margin: 0;
+  }
+  .table-scroll { overflow-x: auto; margin: 1rem 0; }
+  table { border-collapse: collapse; width: 100%; font-size: .92rem; }
+  th, td { text-align: left; padding: .55rem .8rem; border-bottom: 1px solid var(--border); }
+  th { color: var(--muted); font-size: .8rem; text-transform: uppercase; letter-spacing: .05em; }
+  .note {
+    background: var(--accent-soft);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: .8rem 1.1rem;
+    margin: 1.25rem 0;
+    font-size: .95rem;
+  }
+  .check { color: var(--good); font-weight: 700; margin-right: .4rem; }
+  footer {
+    margin-top: 3.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--border);
+    color: var(--muted);
+    font-size: .85rem;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="hero">
+  <span class="kicker">Field Notes</span>
+  <h1>Superpowers</h1>
+  <p class="subtitle">An independent overview and hands-on look at the open-source project that gives coding agents a disciplined, senior-engineer workflow through a library of composable skills.</p>
+  <a class="repo-link" href="https://github.com/obra/superpowers">obra/superpowers on GitHub →</a>
+  <div class="stats">
+    <div class="stat"><div class="num">150k+</div><div class="lbl">GitHub stars</div></div>
+    <div class="stat"><div class="num">14</div><div class="lbl">Core skill modules</div></div>
+    <div class="stat"><div class="num">10+</div><div class="lbl">Supported agent harnesses</div></div>
+    <div class="stat"><div class="num">Oct 2025</div><div class="lbl">First released</div></div>
+    <div class="stat"><div class="num">MIT</div><div class="lbl">License</div></div>
+  </div>
+</header>
+
+<h2>What it is</h2>
+<p>Superpowers is <strong>an agentic skills framework and a software-development methodology</strong>. Its own description calls it "a complete software development methodology for your coding agents, built on top of a set of composable skills and some initial instructions." Built by Jesse Vincent (obra), it installs into your coding agent and teaches it to work like a careful senior engineer <em>before</em> it writes any code.</p>
+<p>The core idea is that the agent — not a Python orchestrator or a hidden runtime — is the intelligence. Superpowers ships mostly as Markdown: each "skill" is an instruction file the agent reads on demand, plus a small amount of shell and JavaScript to register those skills with each host tool. There is no server to run and no model to host; the behavior change comes entirely from the instructions the agent loads.</p>
+
+<h2>How it works</h2>
+<p>A gateway skill, <code>using-superpowers</code>, acts as a decision gate: before responding or acting, the agent is told to check whether any skill applies and to invoke it first. Process skills (brainstorming, systematic debugging) set the approach; implementation skills then carry it out. A typical feature runs through a pipeline of skills:</p>
+<pre><code>brainstorming            (clarify the design with the human)
+  → using-git-worktrees  (isolate the work)
+  → writing-plans        (write an explicit, approved plan)
+  → executing-plans / subagent-driven-development
+      (TDD: RED → GREEN → REFACTOR, often via subagents)
+  → requesting-code-review / receiving-code-review
+  → verification-before-completion
+  → finishing-a-development-branch</code></pre>
+<p>The methodology leans on test-driven development, systematic (not ad-hoc) approaches, complexity reduction, and evidence-based verification. Once a plan is approved, the agent is expected to follow it without drifting — the project describes agents working for a couple of hours at a stretch while staying on plan.</p>
+
+<div class="cards">
+  <div class="card"><h3>Skills are just Markdown</h3><p>Every capability is a readable <code>SKILL.md</code> you can inspect before trusting it — no compiled black box.</p></div>
+  <div class="card"><h3>Composable by design</h3><p>Process skills and implementation skills stack, so one request can chain brainstorming, planning, TDD, and review.</p></div>
+  <div class="card"><h3>Test-driven by default</h3><p>The TDD skill enforces the RED-GREEN-REFACTOR loop rather than leaving testing to the agent's discretion.</p></div>
+  <div class="card"><h3>Subagent-driven</h3><p>Work can be dispatched to parallel subagents in isolated git worktrees, with code review folded into the loop.</p></div>
+  <div class="card"><h3>Multi-harness</h3><p>The same skills install into Claude Code, Cursor, Codex, Copilot CLI, Antigravity, and more.</p></div>
+  <div class="card"><h3>Extensible</h3><p>A <code>writing-skills</code> meta-skill teaches the agent how to author new skills in the same format.</p></div>
+</div>
+
+<h2>The skills library</h2>
+<p>The current <code>skills/</code> directory holds fourteen top-level skills:</p>
+<ul class="pill-row">
+  <li>using-superpowers</li>
+  <li>brainstorming</li>
+  <li>writing-plans</li>
+  <li>executing-plans</li>
+  <li>subagent-driven-development</li>
+  <li>test-driven-development</li>
+  <li>systematic-debugging</li>
+  <li>requesting-code-review</li>
+  <li>receiving-code-review</li>
+  <li>verification-before-completion</li>
+  <li>using-git-worktrees</li>
+  <li>dispatching-parallel-agents</li>
+  <li>finishing-a-development-branch</li>
+  <li>writing-skills</li>
+</ul>
+<p>A separate community repository, <code>obra/superpowers-skills</code>, and an experimental <code>obra/superpowers-lab</code> extend the set with additional, editable skills.</p>
+
+<h2>Installing it</h2>
+<p>Superpowers is distributed as a plugin, so each agent harness installs it separately. A few of the officially documented commands:</p>
+<div class="table-scroll">
+<table>
+  <thead><tr><th>Harness</th><th>Install</th></tr></thead>
+  <tbody>
+    <tr><td>Claude Code (official)</td><td><code>/plugin install superpowers@claude-plugins-official</code></td></tr>
+    <tr><td>Claude Code (project marketplace)</td><td><code>/plugin marketplace add obra/superpowers-marketplace</code> → <code>/plugin install superpowers@superpowers-marketplace</code></td></tr>
+    <tr><td>Cursor</td><td><code>/add-plugin superpowers</code></td></tr>
+    <tr><td>Antigravity</td><td><code>agy plugin install https://github.com/obra/superpowers</code></td></tr>
+    <tr><td>GitHub Copilot CLI</td><td><code>copilot plugin marketplace add obra/superpowers-marketplace</code> → <code>copilot plugin install superpowers@superpowers-marketplace</code></td></tr>
+    <tr><td>Kimi Code</td><td><code>/plugins install https://github.com/obra/superpowers</code></td></tr>
+    <tr><td>Pi</td><td><code>pi install git:github.com/obra/superpowers</code></td></tr>
+  </tbody>
+</table>
+</div>
+<p>Codex, Factory Droid, and OpenCode are also supported with their own procedures — check the repo's README for the current, exact commands, since the marketplace names change as the project evolves.</p>
+
+<h2>Field notes from a hands-on inspection</h2>
+<p>Because Superpowers works by injecting instructions your coding agent then follows, it's worth a look before wiring it into a tool with file and shell access. A read of the public <code>main</code> branch found:</p>
+<ul>
+  <li><span class="check">✓</span><strong>Transparent, readable skills.</strong> The capabilities are plain Markdown <code>SKILL.md</code> files, not compiled artifacts. You can read exactly what each skill instructs the agent to do before enabling it.</li>
+  <li><span class="check">✓</span><strong>Permissive, well-known license.</strong> The project is MIT licensed, so there are no unusual redistribution obligations.</li>
+  <li><span class="check">✓</span><strong>Active and widely used.</strong> It's one of the more popular agent-tooling projects on GitHub, with a public issue tracker, a community skills repo, and frequent updates.</li>
+  <li><span class="check">✓</span><strong>Sensible defaults.</strong> The methodology's own guardrails — mandatory planning, TDD, explicit human approval during brainstorming — push toward safer, reviewable work rather than unchecked automation.</li>
+</ul>
+<div class="note">
+  Honest caveats for an instruction-injection framework: the <code>using-superpowers</code> skill is deliberately forceful ("if there's even a 1% chance a skill applies, use it"), so the plugin meaningfully steers your agent — read the skills you're enabling. It installs hooks and registers with each harness, and the project collects optional version-adoption telemetry you may want to review or disable. As with any agent plugin, skills can change between releases, so re-skim them after updates and run the agent with the least access it needs.
+</div>
+
+<footer>
+  Independent notes based on the public repository as of July 2026. Not affiliated with the Superpowers project or Prime Radiant. Source: <a href="https://github.com/obra/superpowers">github.com/obra/superpowers</a>.
+</footer>
+
+</div>
+</body>
+</html>
