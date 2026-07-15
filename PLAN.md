@@ -1,10 +1,17 @@
 # Implementation Plan: Vacant-Land Listing Reel Pipeline
 
-**Goal:** When the user gives Claude photos of a vacant land parcel, Claude produces a
-short vertical listing reel (like a realtor's Facebook/Instagram Reel): drone-style
-motion over the actual land photos, a fast transition, then a reveal of an
-**AI rendering of the finished home** on that lot, with a caption pill reading
-"AI RENDERING OF FINISHED HOME".
+**Goal:** Turn photos of a vacant land parcel into a short vertical listing reel (like
+a realtor's Facebook/Instagram Reel): drone-style motion over the actual land photos,
+a fast transition, then a reveal of an **AI rendering of the finished home** on that
+lot, with a caption pill reading "AI RENDERING OF FINISHED HOME".
+
+Two phases, both in scope:
+
+- **Phase 1 — Claude-side pipeline (§2–§7):** the user drops photos into a Claude Code
+  session and Claude runs the pipeline. This is the reference implementation.
+- **Phase 2 — Public website (§10–§16):** a free static web app on this repo's GitHub
+  Pages site where *anyone* can upload land photos and generate the same reel in their
+  browser. Phase 1's motion/transition math is ported to JS, so build Phase 1 first.
 
 This plan is written to be executed step-by-step by an implementing agent. Follow it
 in order. Do not make architectural changes without asking the user.
@@ -56,6 +63,11 @@ tools/land_reel/
   render_home.py                           # land photo + prompt -> AI render image (§4)
   make_reel.py                             # photos + render -> final MP4 (§5)
   README.md                                # 1-page usage doc for humans
+landreel/                                  # Phase 2 web app, served by GitHub Pages (§10–§16)
+  index.html                               # single-page app shell + UI
+  app.js                                   # upload, render call, video pipeline, export
+  style.css
+  vendor/mp4-muxer.min.js                  # vendored (committed) MP4 muxer — no CDN at runtime
 PLAN.md                                    # this file (delete in the final PR once implemented)
 ```
 
@@ -193,18 +205,135 @@ No API key is needed to test the video path:
 ## 8. Git / PR
 
 1. Work on `claude/vacant-land-images-snmtm4`; commit in logical units
-   (tools, skill, docs).
+   (Phase 1 tools, skill, web app, docs).
 2. Update the repo `README.md` with a short section pointing at
-   `tools/land_reel/README.md`.
+   `tools/land_reel/README.md` and the live web app URL
+   (`https://malcolmkwallaker-cyber.github.io/landreel/`).
 3. Delete this `PLAN.md` in the final commit (it's a handoff document, not a feature).
 4. Push with `git push -u origin claude/vacant-land-images-snmtm4` (retry w/ backoff on
    network errors only) and open a **draft PR** to `main` if one isn't already open;
-   include a summary, the test evidence from §7, and a note about which encode path
-   (bundled ffmpeg vs. mp4v) ended up active.
+   include a summary, the test evidence from §7 and §15, and a note about which encode
+   path (bundled ffmpeg vs. mp4v) ended up active.
 
 ## 9. Out of scope (do not build)
 
 - AI image-to-video (Veo/Kling) motion clips — noted as a future enhancement in the
   README only. The Ken Burns pipeline is the deliverable.
-- Music/audio, watermarks, multi-format exports, web UI.
+- Music/audio, watermarks, multi-format exports.
 - Any dependency on OpenMontage or other agent-instruction repos (§1.5).
+- The hosted key-proxy backend (§14) — spec only, build later if the user asks.
+
+---
+
+# Phase 2 — Public website (`/landreel/`)
+
+## 10. Architecture (locked — do not substitute a backend framework)
+
+This repo is a **GitHub Pages site: static hosting only, no server**. The web app must
+therefore be fully client-side:
+
+- **Video assembly happens in the browser.** Draw frames on an offscreen
+  `<canvas>` (1080×1920 @ 30 fps, same shot plan as §5), encode with the
+  **WebCodecs `VideoEncoder`** (H.264 `avc1.42003e` or similar baseline/main profile),
+  and mux to MP4 with a **vendored copy of the `mp4-muxer` npm package** committed at
+  `landreel/vendor/mp4-muxer.min.js`. No runtime CDN dependencies.
+- **The AI render call goes directly browser → Gemini API** (bring-your-own-key,
+  §13). `generativelanguage.googleapis.com` supports CORS from browsers with an API
+  key. No key ever touches this repo or any server we run.
+- **No uploads are stored anywhere.** Photos stay in memory in the user's tab; the
+  only network call is the optional render request to Google. State the privacy
+  story in the UI footer.
+- Browser support: Chrome/Edge/Android Chrome (WebCodecs). If
+  `typeof VideoEncoder === "undefined"`, fall back to `MediaRecorder` on a canvas
+  `captureStream()` producing WebM, and label the download button accordingly.
+  If neither exists, show a "use Chrome" notice — do not silently fail.
+
+## 11. UX flow (single page, four steps shown as a stepper)
+
+1. **Add photos** — drag-drop / file picker, 1–6 images, JPEG/PNG/HEIC-as-JPEG.
+   Thumbnails reorderable (wide shots first). Downscale each to max 2048px on load
+   (canvas) to bound memory.
+2. **Home render** — two paths, presented as tabs:
+   (a) *Generate with AI*: style picker (modern cabin / farmhouse / rambler / A-frame),
+   optional free-text notes, "paste your Gemini API key" field (§13), Generate button,
+   regenerate allowed. Show the returned render for approval.
+   (b) *Upload my own render*: file input, for users who already have one.
+   Skipping this step entirely is allowed → land-only montage, no pill.
+3. **Preview & tweak** — live `<canvas>` preview loop of the full reel (can run at
+   reduced resolution, e.g. 540×960, for smoothness); controls: total seconds (8–15,
+   default 10), label text (default "AI RENDERING OF FINISHED HOME"), photo order.
+4. **Export** — "Create video" runs the full-res encode with a progress bar
+   (frames are generated in a loop; yield to the event loop every few frames), then
+   offers `reel.mp4` download plus `cover.jpg`. Show a reminder line: *"This video
+   contains an AI rendering — keep the disclosure label when posting."*
+
+Keep the visual design simple and self-contained (no frameworks; plain JS/CSS is
+fine). Load the `dataviz`-style polish only if trivial — function first.
+
+## 12. Client video pipeline (port of §5 — keep the numbers identical)
+
+Reimplement §5's shot plan in JS so Phase 1 and the website produce equivalent output:
+same segment allocation (~65% land / whip ~0.7s / remainder render), same ease
+(`t*t*(3-2*t)`), same zoom ranges (1.00→1.12 in, 1.10→1.00 out), alternating drift,
+whip = fast lateral crop pan + horizontal box blur (implement blur by drawing the
+frame into a narrow canvas and stretching it back, repeated 2–3×, which approximates
+horizontal motion blur cheaply) + crossfade. Caption pill: rounded rect + bold
+sans-serif via canvas 2D, bottom-right, 4% margin, 0.4s fade-in. Cover = first
+render-segment frame.
+
+Structure `app.js` so the frame-drawing function `drawFrame(ctx, t)` is pure
+(given assets + params + time → pixels); the preview loop and the exporter both call
+it. This is the piece most worth unit-sanity-checking by eye in §15.
+
+## 13. AI render call (bring-your-own-key MVP)
+
+- Field for the user's Gemini API key with a link to Google AI Studio's free key page
+  and this exact warning text: "Your key is used directly from your browser to call
+  Google, and is saved only in this browser (localStorage). Don't use a key you can't
+  rotate."
+- Request: `POST https://generativelanguage.googleapis.com/v1beta/models/
+  {model}:generateContent?key=...` with the hero photo inlined
+  (`inline_data`, base64 JPEG, downscaled to ≤1536px) + the render prompt. Default
+  model `gemini-2.5-flash-image` — same env-note as §4: verify the current id at
+  implementation time; keep it in one constant at the top of `app.js`.
+- The render prompt is a template literal assembled from the style picker + notes +
+  fixed constraints (same constraints as §6.3: keep the exact lot/terrain/trees/light,
+  one home on the buildable clearing, photorealistic, no people/cars/text).
+- Handle: 4xx with a readable message (bad key, quota), no-image responses (retry once
+  with a "return only an image" nudge), and offline.
+
+## 14. Hosted key-proxy (spec only — do NOT build now)
+
+So users without their own key can generate renders later: a Cloudflare Worker
+(`POST /render`, CORS locked to this Pages origin, Worker secret holds the key,
+per-IP daily quota in KV, 8 MB body cap). Document this in `tools/land_reel/README.md`
+as "future"; the UI's BYOK tab should be written so a hosted option can be added as a
+third tab without restructuring.
+
+## 15. Phase 2 testing (must actually be run before the PR is marked ready)
+
+Playwright + Chromium are preinstalled in this environment
+(`PLAYWRIGHT_BROWSERS_PATH=/opt/pw-browsers`; if a pinned @playwright/test version
+complains, launch with `executablePath: '/opt/pw-browsers/chromium'`; never run
+`playwright install`).
+
+1. Serve the repo root with `python3 -m http.server` and open
+   `http://localhost:PORT/landreel/` in headless Chromium.
+2. Script the flow with the §7 synthetic images: add 3 photos → skip AI render, upload
+   the fake render via tab (b) → set 8s → export.
+3. Assert: a download of `reel.mp4` is produced, >100 KB; decode it back (Phase 1's
+   OpenCV is already installed) and check 1080×1920, ~8s, and that a late frame
+   contains the pill (bright pixel cluster bottom-right).
+4. Screenshot each UX step and **Read the screenshots** to check layout sanity.
+5. Test the no-WebCodecs fallback path by stubbing `window.VideoEncoder = undefined`
+   before page scripts run and confirming the WebM path or notice appears.
+6. The BYOK Gemini call can't be integration-tested without a key; test its error
+   path with an obviously invalid key and assert the readable error message.
+
+## 16. Disclosure, abuse & legal posture (bake into the UI, not a doc)
+
+- The label defaults to "AI RENDERING OF FINISHED HOME" and the UI must not offer a
+  "remove label" control when an AI render is used (editing the text is fine).
+- Footer lines: not affiliated with any MLS; renders are conceptual, not construction
+  plans; photos are processed in-browser and not uploaded to this site.
+- No accounts, no analytics, no third-party scripts.
