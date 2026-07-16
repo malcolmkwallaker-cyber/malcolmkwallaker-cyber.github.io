@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Land Reel — vacant-land listing video maker</title>
+<meta name="description" content="Turn vacant-land photos into a vertical listing reel, right in your browser. No uploads, no accounts.">
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="site-header">
+  <h1>Land&nbsp;Reel</h1>
+  <p class="tagline">Turn vacant-land photos into a vertical listing reel — entirely in your browser.</p>
+</header>
+
+<main>
+  <ol class="stepper" id="stepper">
+    <li class="step active" data-step="1">1. Add photos</li>
+    <li class="step" data-step="2">2. Home render</li>
+    <li class="step" data-step="3">3. Preview &amp; tweak</li>
+    <li class="step" data-step="4">4. Export</li>
+  </ol>
+
+  <section class="panel" id="panel-1" data-panel="1">
+    <h2>1. Add your land photos</h2>
+    <p class="hint">1–6 photos. Drag to reorder — put the widest establishing shot first.</p>
+    <div class="dropzone" id="dropzone" tabindex="0">
+      <p>Drag &amp; drop photos here, or click to choose files</p>
+      <input type="file" id="fileInput" accept="image/*" multiple hidden>
+    </div>
+    <ul class="thumbs" id="thumbs"></ul>
+    <div class="actions">
+      <button id="toStep2" disabled>Next: home render →</button>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-2" data-panel="2" hidden>
+    <h2>2. Home render</h2>
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="ai">Generate with AI</button>
+      <button class="tab-btn" data-tab="upload">Upload my own render</button>
+    </div>
+
+    <div class="tab-panel" id="tab-ai">
+      <label>Home style
+        <select id="homeStyle">
+          <option value="modern cabin">Modern cabin</option>
+          <option value="farmhouse">Farmhouse</option>
+          <option value="rambler / ranch">Rambler / ranch</option>
+          <option value="A-frame">A-frame</option>
+        </select>
+      </label>
+      <label>Notes (optional)
+        <textarea id="homeNotes" rows="2" placeholder="e.g. black metal roof, wraparound porch"></textarea>
+      </label>
+      <label>Gemini API key
+        <input type="password" id="geminiKey" placeholder="paste your key here" autocomplete="off">
+      </label>
+      <p class="hint">
+        Get a free key at <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">Google AI Studio</a>.
+        Your key is used directly from your browser to call Google, and is saved only in this browser
+        (localStorage). Don't use a key you can't rotate.
+      </p>
+      <div class="actions">
+        <button id="generateRender">Generate render</button>
+      </div>
+      <p id="renderStatus" class="status" role="status"></p>
+      <img id="renderPreview" class="render-preview" hidden alt="AI rendering preview">
+    </div>
+
+    <div class="tab-panel" id="tab-upload" hidden>
+      <input type="file" id="renderFileInput" accept="image/*">
+      <img id="uploadPreview" class="render-preview" hidden alt="Uploaded render preview">
+    </div>
+
+    <div class="actions">
+      <button id="backTo1">← Back</button>
+      <button id="toStep3">Next: preview →</button>
+      <button id="skipRender">Skip (land-only montage) →</button>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-3" data-panel="3" hidden>
+    <h2>3. Preview &amp; tweak</h2>
+    <div class="preview-wrap">
+      <canvas id="previewCanvas" width="540" height="960"></canvas>
+    </div>
+    <label>Total seconds
+      <input type="range" id="secondsRange" min="8" max="15" step="0.5" value="10">
+      <span id="secondsValue">10s</span>
+    </label>
+    <label>Caption label
+      <input type="text" id="labelInput" value="AI RENDERING OF FINISHED HOME">
+    </label>
+    <div class="actions">
+      <button id="backTo2">← Back</button>
+      <button id="toStep4">Next: export →</button>
+    </div>
+  </section>
+
+  <section class="panel" id="panel-4" data-panel="4" hidden>
+    <h2>4. Export</h2>
+    <p class="hint">This video contains an AI rendering — keep the disclosure label when posting.</p>
+    <button id="exportBtn">Create video</button>
+    <div class="progress-wrap" id="progressWrap" hidden>
+      <progress id="exportProgress" max="100" value="0"></progress>
+      <span id="exportProgressLabel">0%</span>
+    </div>
+    <p id="exportStatus" class="status" role="status"></p>
+    <div class="downloads" id="downloads" hidden>
+      <a id="downloadVideo" download="reel.mp4">Download reel</a>
+      <a id="downloadCover" download="cover.jpg">Download cover image</a>
+    </div>
+    <div class="actions">
+      <button id="backTo3">← Back</button>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <p>Not affiliated with any MLS. Renders are conceptual, not construction plans.
+     Photos are processed in your browser and are never uploaded to this site.
+     No accounts, no analytics, no third-party scripts.</p>
+</footer>
+
+<script src="vendor/mp4-muxer.min.js"></script>
+<script src="shotplan.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
