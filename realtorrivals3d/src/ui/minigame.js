@@ -1,7 +1,10 @@
 // ============================================================
 // ui/minigame.js — the shared "stop the needle" timing-bar
-// overlay used by the pitch/close action. Later activities
-// (Phase 5+) get their own overlay but reuse this shell.
+// overlay. Runs as a QUEUE: a session can process one lead (the
+// walk-up pitch/close) or several in a row (CALL LEADS / TEXT
+// LEADS from ui/activity.js), spending energy once per session
+// no matter how many leads it touches — mirrors the 2D game's
+// flat per-action energy cost.
 // ============================================================
 'use strict';
 
@@ -12,24 +15,46 @@ import { pitchLead } from '../sim/pipeline.js';
 
 const $ = (id) => document.getElementById(id);
 
-export const mg = { active: false, zoneA: 0, zoneW: 0, lead: null, dir: 1, pos: 0 };
+export const mg = {
+  active: false, zoneA: 0, zoneW: 0, lead: null, dir: 1, pos: 0, speed: 0.85,
+  queue: [], total: 0, verb: 'PITCH', results: [],
+};
 
 let deps = null; // { scene, toast, audio }
 export function initMinigame(d) {
   deps = d;
-  $('mg').addEventListener('pointerdown', () => { if (mg.active) resolveMinigame(); });
+  $('mg').addEventListener('pointerdown', () => { if (mg.active) resolveRound(); });
 }
 
+// Single-lead session — the in-person walk-up pitch/close.
 export function tryStartPitch(lead) {
-  if (state.energy <= 0) {
-    deps.toast("You're running on empty. Head home and sleep (phone → END DAY) to recharge.", 'bad');
-    return false;
+  const verb = lead.stage === 'appt' ? 'CLOSE THE DEAL' : 'WARM UP THE LEAD';
+  return startSession([lead], { verb });
+}
+
+// General entry point: opts = { verb, speed, zoneMult, spendEnergy }
+export function startSession(targets, opts = {}) {
+  if (!targets.length) return false;
+  if (opts.spendEnergy !== false) {
+    if (state.energy <= 0) {
+      deps.toast("You're running on empty. Head home and sleep (phone → END DAY) to recharge.", 'bad');
+      return false;
+    }
+    state.energy = Math.max(0, state.energy - 1);
   }
-  startMinigame(lead);
+  mg.queue = targets.slice();
+  mg.total = targets.length;
+  mg.verb = opts.verb || 'PITCH';
+  mg.speed = opts.speed || 0.85;
+  mg.zoneMult = opts.zoneMult || 1;
+  mg.results = [];
+  nextRound();
   return true;
 }
 
-function startMinigame(lead) {
+function nextRound() {
+  if (!mg.queue.length) { finishSession(); return; }
+  const lead = mg.queue.shift();
   mg.active = true; mg.lead = lead; mg.pos = 0; mg.dir = 1;
   const warm = clamp(lead.warmth / 100, 0.1, 0.95);
   const ch = Data.CHARACTERS[state.picked];
@@ -37,22 +62,23 @@ function startMinigame(lead) {
   if (lead.type.lake && ch.id === 'malcolm') zw *= 1.2;
   if (ch.negotiateBonus) zw *= (1 + ch.negotiateBonus * 0.6);
   if (lead.stage === 'appt') zw *= 0.85; // closing is harder than warming up
-  mg.zoneW = clamp(zw, 0.1, 0.55);
+  zw *= mg.zoneMult;
+  mg.zoneW = clamp(zw, 0.08, 0.55);
   mg.zoneA = rand(0.08, 0.9 - mg.zoneW);
-  const verb = lead.stage === 'appt' ? 'CLOSE THE DEAL' : 'WARM UP THE LEAD';
-  $('mgtitle').textContent = verb + ' · ' + lead.type.label + ' · ' + money(lead.value);
+  const progress = mg.total > 1 ? ' (' + (mg.total - mg.queue.length) + '/' + mg.total + ')' : '';
+  $('mgtitle').textContent = mg.verb + progress + ' · ' + lead.type.label + ' · ' + money(lead.value);
   $('mginfo').textContent = 'Warmth ' + Math.round(lead.warmth) + ' — stop the needle in the green!';
   $('mgzone').style.left = (mg.zoneA * 100) + '%';
   $('mgzone').style.width = (mg.zoneW * 100) + '%';
   $('mg').style.display = 'flex';
 }
 
-function resolveMinigame() {
-  mg.active = false; $('mg').style.display = 'none';
+function resolveRound() {
+  mg.active = false;
   const lead = mg.lead;
   const hit = mg.pos >= mg.zoneA && mg.pos <= mg.zoneA + mg.zoneW;
-  state.energy = Math.max(0, state.energy - 1);
   const result = pitchLead(deps.scene, lead, hit);
+  mg.results.push(result);
   const { toast, audio } = deps;
   if (result.kind === 'sold') {
     audio.cash();
@@ -71,11 +97,22 @@ function resolveMinigame() {
     audio.bad();
     toast('They said they want to "sleep on it, maybe till fall." Warmth down — try again.', 'bad');
   }
+  if (mg.queue.length) { nextRound(); } else { finishSession(); }
+}
+
+function finishSession() {
+  mg.active = false;
+  $('mg').style.display = 'none';
+  if (mg.total > 1) {
+    const wins = mg.results.filter(r => r.kind === 'advance' || r.kind === 'sold').length;
+    deps.toast(mg.verb + ' session done: ' + wins + '/' + mg.total + ' went well.', wins > 0 ? 'good' : 'bad');
+  }
+  mg.total = 0; mg.results = [];
 }
 
 export function updateMinigame(dt) {
   if (!mg.active) return false;
-  mg.pos += mg.dir * dt * 0.85;
+  mg.pos += mg.dir * dt * mg.speed;
   if (mg.pos > 1) { mg.pos = 1; mg.dir = -1; }
   if (mg.pos < 0) { mg.pos = 0; mg.dir = 1; }
   $('mgneedle').style.left = 'calc(' + (mg.pos * 100) + '% - 2px)';
@@ -83,5 +120,5 @@ export function updateMinigame(dt) {
 }
 
 export function confirmMinigame() {
-  if (mg.active) resolveMinigame();
+  if (mg.active) resolveRound();
 }

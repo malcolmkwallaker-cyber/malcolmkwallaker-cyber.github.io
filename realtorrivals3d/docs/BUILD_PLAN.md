@@ -67,15 +67,31 @@ therefore not yet used — reintroduce them when `active`/`offer`/`pending` stag
 `maxActivePipeline` is respected (spawn is capped); `attendeeDeadline` awaits the
 OPEN HOUSE activity.
 
-## Phase 5 — Activities I: CALL, TEXT, FOLLOW UP (+ shared minigame kit)
-**Goal:** first three minigames + the shared overlay/timing/dialogue components.
-**Tasks:** minigame framework (mount overlay, pause world input, resolve score 0–1,
-apply sim effects with character/upgrade modifiers — mirror 2D `makeMinigame`
-contract); CALL timing-wheel at office; TEXT rapid-reply; FOLLOW UP doorstep dialogue
-using `Data.FOLLOWUP_ROUNDS` verbatim; energy spend + day flow.
-**Accept:** a full day loop: drive to office → call (warmth up per score) → drive to
-a lead's house → follow up → sleep → decay applies; scores affected by character
-bonuses (verify Malcolm vs Bridger).
+## Phase 5 — Activities I: CALL, TEXT, FOLLOW UP (+ shared minigame kit) ✅ DONE
+**Delivered:** `ui/minigame.js`'s timing-bar overlay is now a QUEUE (`startSession`)
+that can process one lead (the walk-up pitch/close, unchanged) or several in a row
+for one energy spend — mirrors the 2D game's flat per-action energy cost. CALL LEADS
+and TEXT LEADS live behind an office menu (`ui/activity.js`, drive/walk up to THE
+OFFICE, press E): CALL targets up to 3 non-appt leads (warmest first) with the
+standard timing bar; TEXT targets up to 4 with a faster needle + narrower zone
+("thumbs of fury" — deliberately harder). FOLLOW UP lives at MUGS & PLUGS CAFE:
+targets the `followupContacts` most at-risk leads (highest `daysIgnored` first) and
+runs a new dialogue-queue overlay using `Data.FOLLOWUP_ROUNDS` verbatim (1 good + 2
+bad responses, shuffled). All three route every result through the same
+`pipeline.pitchLead()` used by the in-person pitch, so character/stage/warmth rules
+are identical no matter which activity touched the lead.
+**Accept (verified):** office menu opens without exiting the car and blocks driving
+while up (fixed a same-frame double-fire where E both exited the car and opened the
+menu); CANCEL closes it cleanly; CALL processes exactly the leads offered and spends
+1 energy regardless of queue length; FOLLOW UP shows the real 2D dialogue text and
+resolves good/bad choices through the pipeline; both office and coffee prompts only
+appear within 22m and are location-gated (other locations still show the Phase 6+
+placeholder).
+**Deferred:** WRITE OFFERS/CLOSE SALES (`Data.ACTIONS` `offer`/`close`, both
+`minigame: null` in the source) are intentionally not implemented yet — they only
+make sense once the `active`/`offer`/`pending` pipeline stages exist (see Phase 4's
+notes); closing currently happens via the existing in-person "CLOSE DEAL" pitch at
+the `appt` stage.
 
 ## Phase 6 — Activities II: OPEN HOUSE, SHOW HOMES, LISTING APPT
 As GDD §6.4–6.7. Attendee leads with followup deadlines; buyer-in-car showing tour

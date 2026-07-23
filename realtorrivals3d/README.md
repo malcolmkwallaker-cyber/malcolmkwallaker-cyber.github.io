@@ -13,9 +13,12 @@ appointment, and close before a rival agent snipes the deal with full-size
 caramel rolls. Pick a difficulty (CASUAL/STANDARD/HARD) — it drives real warmth
 decay, ghosting, and appointment-steal odds straight from the 2D game's balance
 table. Open the phone (P) to see your live pipeline and end the day on your terms.
+Drive up to THE OFFICE to CALL or TEXT several leads at once, or to MUGS & PLUGS
+CAFE to FOLLOW UP on the ones about to ghost you — same dialogue as the 2D game.
 
-**Controls:** WASD drive/walk · E action (pitch / close / enter / exit car) ·
-P phone/CRM · SPACE brake · M mute. On phones: left virtual stick + ACTION button.
+**Controls:** WASD drive/walk · E action (pitch / close / office / follow up /
+enter / exit car) · P phone/CRM · SPACE brake · M mute. On phones: left virtual
+stick + ACTION button.
 
 ## What's in this folder
 
@@ -26,7 +29,7 @@ P phone/CRM · SPACE brake · M mute. On phones: left virtual stick + ACTION but
 | `src/world/` | Map layout, heightfield, terrain/water/road meshes, towns/buildings, forest |
 | `src/actors/` | Character (on-foot) and vehicle (arcade car) meshes + controllers |
 | `src/sim/` | `calendar.js` (day/night/season) and `pipeline.js` (the ported 2D "brain": leads, warmth, stages, ghosting, commission) |
-| `src/ui/` | HUD, minimap, phone/CRM, compass, toasts, title/difficulty select, pitch minigame |
+| `src/ui/` | HUD, minimap, phone/CRM, compass, toasts, title/difficulty select, timing-bar minigame queue, office menu + follow-up dialogue |
 | `lib/three.module.min.js` | Vendored Three.js r160 (no CDN, no build step) |
 | `data/game-data.js` | The 2D game's entire data set, ported verbatim — characters, balance tables, 48 lead types, 25 upgrades, 8 bosses, weather, events, achievements. Single source of truth for the 3D build. |
 | `docs/GAME_DESIGN.md` | Full open-world game design document |
@@ -41,7 +44,8 @@ P phone/CRM · SPACE brake · M mute. On phones: left virtual stick + ACTION but
 | 2: modules (`src/` split), building colliders | ✅ done |
 | 3: phone/CRM, energy pips, compass+minimap objective targeting | ✅ done (GPS road-routing deferred) |
 | 4: difficulty select, balance-driven decay/ghosting/stage progression, commission, save/resume | ✅ done (simplified 4-stage pipeline; full 8-stage awaits Phase 5–7 activities) |
-| 5–12: remaining activities, rival AI/battles, economy/toys, weather/events, bosses, achievements, polish | 📋 planned — see `docs/BUILD_PLAN.md` |
+| 5: CALL/TEXT (office menu) + FOLLOW UP (dialogue, real 2D script) | ✅ done (WRITE OFFERS/CLOSE SALES await the offer/pending stages) |
+| 6–12: remaining activities, rival AI/battles, economy/toys, weather/events, bosses, achievements, polish | 📋 planned — see `docs/BUILD_PLAN.md` |
 
 ## Developing
 

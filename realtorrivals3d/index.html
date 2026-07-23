@@ -86,6 +86,24 @@
   #mgneedle { position:absolute; top:-2px; bottom:-2px; width:4px; background:var(--white); }
   #mgtitle { color:var(--yellow); font-size:16px; font-weight:bold; }
   #mginfo { color:var(--gray); font-size:12px; }
+  /* office action menu */
+  #actionmenu { display:none; }
+  #actionmenu .panel { max-width:360px; }
+  .actionbtn { display:block; width:100%; box-sizing:border-box; margin:8px 0; background:var(--dusk);
+    border:2px solid var(--slate); color:var(--white); font-family:inherit; text-align:left;
+    padding:10px 14px; border-radius:8px; cursor:pointer; }
+  .actionbtn:hover { border-color:var(--yellow); }
+  .actionbtn .nm { color:var(--yellow); font-weight:bold; font-size:14px; }
+  .actionbtn .ti { color:var(--gray); font-size:11px; margin-top:2px; }
+  /* follow-up dialogue */
+  #dlg { display:none; }
+  #dlg .panel { max-width:min(90vw, 520px); }
+  #dlgwho { color:var(--sky); font-size:12px; letter-spacing:1px; margin-bottom:6px; }
+  #dlgmsg { color:var(--white); font-size:15px; line-height:1.5; margin-bottom:14px; }
+  #dlgchoices { display:flex; flex-direction:column; gap:8px; }
+  .dlgbtn { font-family:inherit; background:var(--dusk); border:2px solid var(--slate); color:var(--white);
+    border-radius:8px; padding:10px 12px; cursor:pointer; font-size:13px; text-align:left; }
+  .dlgbtn:hover { border-color:var(--lime); }
   /* phone panel */
   #phone { position:absolute; z-index:15; left:0; right:0; bottom:0; height:78%;
     background:var(--ink); border-top:3px solid var(--slate); border-radius:14px 14px 0 0;
@@ -185,6 +203,24 @@
     <div id="mginfo">Stop the needle in the green to win them over.</div>
     <div id="mgbarwrap"><div id="mgzone"></div><div id="mgneedle"></div></div>
     <div style="color:var(--slate);font-size:11px">E / SPACE / TAP</div>
+  </div>
+</div>
+
+<div class="overlay" id="actionmenu">
+  <div class="panel">
+    <h1 style="font-size:18px">THE OFFICE</h1>
+    <p style="margin-top:0">Pick an action — each costs 1 energy and works the whole pipeline at once.</p>
+    <button class="actionbtn" id="officecall"><div class="nm">CALL LEADS</div><div class="ti">Dial for dollars. Warms up to 3 leads.</div></button>
+    <button class="actionbtn" id="officetext"><div class="nm">TEXT LEADS</div><div class="ti">Thumbs of fury. Faster, trickier, up to 4 leads.</div></button>
+    <button class="smallbtn" id="officeclose" style="margin-top:6px">CANCEL</button>
+  </div>
+</div>
+
+<div class="overlay" id="dlg">
+  <div class="panel">
+    <div id="dlgwho">FOLLOW UP</div>
+    <div id="dlgmsg"></div>
+    <div id="dlgchoices"></div>
   </div>
 </div>
 

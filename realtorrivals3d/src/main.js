@@ -30,6 +30,7 @@ import { initToasts, toast } from './ui/toast.js';
 import { updateHUD } from './ui/hud.js';
 import { initMinimap, drawMinimap } from './ui/minimap.js';
 import { initMinigame, mg, tryStartPitch, updateMinigame, confirmMinigame } from './ui/minigame.js';
+import { initActivities, isActivityBlocking, openOfficeMenu, startFollowupSession, startCallSession, startTextSession } from './ui/activity.js';
 import { buildTitle } from './ui/title.js';
 import { initPhone, togglePhone, isPhoneOpen, renderPhone } from './ui/phone.js';
 import { updateCompass } from './ui/compass.js';
@@ -75,6 +76,7 @@ input.bindActionButton($('abtn'), 'e');
 initToasts($('toasts'));
 initMinimap($('minimap'));
 initMinigame({ scene, toast, audio });
+initActivities({ scene, toast, audio });
 initPhone({ onEndDay: () => forceEndDay() });
 
 // ---------- player + car ----------
@@ -165,42 +167,64 @@ function loop(now) {
   }
   const leadInRange = nearLead && nearLeadDist < 14;
   const phoneBlocking = isPhoneOpen();
+  const uiBlocking = phoneBlocking || isActivityBlocking();
+
+  // office/coffee take priority over enter/exit car on the same E press,
+  // same as lead pitching does — otherwise E parked at the office just
+  // pops you out of the car instead of opening the action menu.
+  let nearActionLoc = null;
+  for (const L of locationObjs) {
+    if ((L.key === 'office' || L.key === 'coffee') && Math.hypot(player.x - L.wx, player.z - L.wz) < 22) {
+      nearActionLoc = L; break;
+    }
+  }
 
   let eConsumedByMg = false;
   if (mg.active) {
     updateMinigame(dt);
     if (pressed['e'] || pressed[' '] || pressed['Enter']) { confirmMinigame(); eConsumedByMg = true; }
-  } else if (phoneBlocking) {
-    // world paused-ish while the phone is up (still renders, no input)
+  } else if (uiBlocking) {
+    // world paused-ish while the phone/office menu/dialogue is up (still renders, no input)
   } else if (player.mode === 'car') {
     const { tollMsg, rightX, rightZ } = updateVehicle(car, carMesh, fwd, steer, braking, dt, colliders, audio);
     if (tollMsg) { state.cash = Math.max(0, state.cash - 150); toast(tollMsg, 'bad'); }
     player.x = car.x; player.z = car.z; player.heading = car.heading;
-    if (pressed['e'] && !leadInRange && Math.abs(car.speed) < 4) {
+    if (pressed['e'] && !leadInRange && !nearActionLoc && Math.abs(car.speed) < 4) {
       player.mode = 'foot';
       player.x = car.x + rightX * 3; player.z = car.z + rightZ * 3;
       playerMesh.visible = true; audio.select();
     }
   } else {
     updateOnFoot(player, playerMesh, camera, fwd, steer, dt, now, colliders);
-    if (pressed['e'] && !leadInRange && Math.hypot(player.x - car.x, player.z - car.z) < 5) {
+    if (pressed['e'] && !leadInRange && !nearActionLoc && Math.hypot(player.x - car.x, player.z - car.z) < 5) {
       player.mode = 'car'; playerMesh.visible = false; audio.select();
     }
   }
 
   // ------- interactions / prompts -------
   let promptTxt = '';
-  if (!mg.active && !phoneBlocking) {
+  if (!mg.active && !uiBlocking) {
     const fx = player.x, fz = player.z;
+    const nearCar = Math.abs(car.speed) < 4;
     if (leadInRange) {
       const verb = nearLead.stage === 'appt' ? 'CLOSE DEAL' : 'PITCH';
       promptTxt = (input.isTouch ? 'ACTION' : 'E') + ' — ' + verb + ' ' + nearLead.type.label + ' (' + nearLead.value.toLocaleString() + ')';
       if (pressed['e'] && !eConsumedByMg) tryStartPitch(nearLead);
+    } else if (nearActionLoc && (player.mode === 'foot' || nearCar)) {
+      if (nearActionLoc.key === 'office') {
+        promptTxt = (input.isTouch ? 'ACTION' : 'E') + ' — ' + nearActionLoc.label + ' (CALL / TEXT LEADS)';
+        if (pressed['e'] && !eConsumedByMg) openOfficeMenu();
+      } else {
+        promptTxt = (input.isTouch ? 'ACTION' : 'E') + ' — ' + nearActionLoc.label + ' (FOLLOW UP)';
+        if (pressed['e'] && !eConsumedByMg) startFollowupSession();
+      }
     } else if (player.mode === 'foot' && Math.hypot(player.x - car.x, player.z - car.z) < 5) {
       promptTxt = (input.isTouch ? 'ACTION' : 'E') + ' — GET IN THE CAR';
-    } else if (player.mode === 'car' && Math.abs(car.speed) < 4) {
+    } else if (player.mode === 'foot' || nearCar) {
       for (const L of locationObjs) {
-        if (Math.hypot(fx - L.wx, fz - L.wz) < 22) { promptTxt = L.label + ' — activities open in Phase 5+'; break; }
+        if (Math.hypot(fx - L.wx, fz - L.wz) >= 22) continue;
+        promptTxt = L.label + ' — activities open in a later phase';
+        break;
       }
     }
   }
@@ -213,7 +237,7 @@ function loop(now) {
     l.beacon.material.opacity = 0.18 + pulse * 0.3;
     l.label.position.y = 12 + Math.sin(now / 300) * 0.6;
   }
-  if (!phoneBlocking) {
+  if (!uiBlocking) {
     rivalTick(now, toast, audio);
     resolveStolenLeads(scene, now, toast, audio);
   }
@@ -244,4 +268,4 @@ function loop(now) {
 requestAnimationFrame(loop);
 
 // debug/testing hook (harmless in production; used by the smoke tests)
-window.__rr = { state, leads, player, car, mg, tryStartPitch, forceEndDay, balance };
+window.__rr = { state, leads, player, car, mg, tryStartPitch, forceEndDay, balance, startCallSession, startTextSession, startFollowupSession };
