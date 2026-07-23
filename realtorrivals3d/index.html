@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Realtor Rivals: Lake Country — 3D Prototype</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏠</text></svg>">
+<style>
+  :root {
+    --ink:#1a1c2c; --purple:#5d275d; --red:#b13e53; --orange:#ef7d57;
+    --yellow:#ffcd75; --lime:#a7f070; --green:#38b764; --teal:#257179;
+    --navy:#29366f; --blue:#3b5dc9; --sky:#41a6f6; --cyan:#73eff7;
+    --white:#f4f4f4; --gray:#94b0c2; --slate:#566c86; --dusk:#333c57;
+  }
+  html, body {
+    margin:0; padding:0; height:100%; height:100dvh; background:var(--ink);
+    overflow:hidden; font-family:"Courier New", monospace;
+    touch-action:none; overscroll-behavior:none;
+    -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
+    -webkit-tap-highlight-color:transparent; position:fixed; inset:0; width:100%;
+  }
+  #game { position:absolute; inset:0; width:100%; height:100%; display:block; touch-action:none; }
+  .hud { position:absolute; z-index:5; pointer-events:none; color:var(--white);
+    text-shadow:1px 1px 0 rgba(26,28,44,.9); }
+  #topleft { top:calc(10px + env(safe-area-inset-top)); left:calc(12px + env(safe-area-inset-left)); font-size:14px; line-height:1.5; }
+  #topleft .cash { color:var(--yellow); font-size:20px; font-weight:bold; }
+  #topleft .who { color:var(--lime); font-weight:bold; letter-spacing:1px; }
+  #clock { color:var(--gray); }
+  #minimap { position:absolute; z-index:5; top:calc(10px + env(safe-area-inset-top)); right:calc(12px + env(safe-area-inset-right));
+    width:180px; height:130px; border:2px solid var(--dusk); border-radius:6px;
+    background:rgba(26,28,44,.75); }
+  #prompt { bottom:calc(96px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%);
+    background:rgba(26,28,44,.85); border:2px solid var(--yellow); color:var(--yellow);
+    padding:6px 14px; border-radius:6px; font-size:15px; font-weight:bold; display:none; }
+  #toasts { bottom:calc(46px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%);
+    display:flex; flex-direction:column; gap:6px; align-items:center; width:min(92vw,560px); }
+  .toast { background:rgba(26,28,44,.92); border:2px solid var(--sky); color:var(--white);
+    padding:6px 12px; border-radius:6px; font-size:13px; text-align:center;
+    animation:toastIn .25s ease-out; max-width:100%; }
+  .toast.good { border-color:var(--lime); } .toast.bad { border-color:var(--red); }
+  .toast.cash { border-color:var(--yellow); color:var(--yellow); font-weight:bold; }
+  @keyframes toastIn { from { opacity:0; transform:translateY(10px);} to { opacity:1; transform:none; } }
+  #hint { bottom:calc(8px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%);
+    color:var(--slate); font-size:11px; white-space:nowrap; }
+  /* overlays */
+  .overlay { position:absolute; inset:0; z-index:20; display:flex; align-items:center; justify-content:center;
+    background:rgba(26,28,44,.82); color:var(--white); }
+  .panel { background:var(--ink); border:3px solid var(--slate); border-radius:10px;
+    padding:22px 26px; max-width:min(92vw, 640px); text-align:center; }
+  .panel h1 { color:var(--yellow); font-size:26px; margin:0 0 4px; letter-spacing:2px; }
+  .panel h2 { color:var(--sky); font-size:14px; margin:0 0 14px; font-weight:normal; }
+  .panel p { color:var(--gray); font-size:13px; line-height:1.55; }
+  .chars { display:flex; gap:14px; justify-content:center; margin:14px 0; flex-wrap:wrap; }
+  .charcard { border:3px solid var(--dusk); border-radius:8px; padding:12px 14px; cursor:pointer;
+    width:200px; text-align:left; background:rgba(51,60,87,.35); }
+  .charcard:hover, .charcard.sel { border-color:var(--yellow); background:rgba(51,60,87,.7); }
+  .charcard .nm { font-size:17px; font-weight:bold; }
+  .charcard .ti { color:var(--sky); font-size:11px; margin-bottom:6px; }
+  .charcard .st { color:var(--lime); font-size:11px; line-height:1.5; }
+  .bigbtn { display:inline-block; margin-top:12px; background:var(--green); color:var(--ink);
+    font-family:inherit; font-weight:bold; font-size:16px; border:0; border-radius:8px;
+    padding:10px 30px; cursor:pointer; letter-spacing:1px; }
+  .bigbtn:hover { background:var(--lime); }
+  /* minigame */
+  #mg { display:none; }
+  #mgbarwrap { width:min(80vw,420px); height:34px; border:3px solid var(--slate); border-radius:8px;
+    position:relative; margin:16px auto 6px; background:var(--dusk); overflow:hidden; }
+  #mgzone { position:absolute; top:0; bottom:0; background:var(--green); opacity:.85; }
+  #mgneedle { position:absolute; top:-2px; bottom:-2px; width:4px; background:var(--white); }
+  #mgtitle { color:var(--yellow); font-size:16px; font-weight:bold; }
+  #mginfo { color:var(--gray); font-size:12px; }
+  /* touch controls */
+  .tc { position:absolute; z-index:10; display:none; }
+  #stick { left:calc(18px + env(safe-area-inset-left)); bottom:calc(24px + env(safe-area-inset-bottom));
+    width:120px; height:120px; border-radius:50%; border:2px solid rgba(148,176,194,.5);
+    background:rgba(26,28,44,.35); }
+  #knob { position:absolute; left:50%; top:50%; width:52px; height:52px; border-radius:50%;
+    background:rgba(148,176,194,.55); transform:translate(-50%,-50%); }
+  #abtn { right:calc(22px + env(safe-area-inset-right)); bottom:calc(40px + env(safe-area-inset-bottom));
+    width:74px; height:74px; border-radius:50%; border:2px solid var(--yellow);
+    background:rgba(255,205,117,.25); color:var(--yellow); font-weight:bold; font-size:13px;
+    display:none; align-items:center; justify-content:center; font-family:inherit; }
+  body.touch #stick, body.touch #abtn { display:flex; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div class="hud" id="topleft">
+  <div class="who" id="hudwho">—</div>
+  <div class="cash" id="hudcash">$0</div>
+  <div id="hudsold">SOLD: 0 · <span style="color:var(--sky)">FOLLOWERS: 150</span></div>
+  <div id="clock">APRIL · DAY 1 · 8:00 AM</div>
+</div>
+<canvas id="minimap" width="360" height="260"></canvas>
+<div class="hud" id="prompt"></div>
+<div class="hud" id="toasts"></div>
+<div class="hud" id="hint">WASD DRIVE/WALK · E ACTION · SPACE BRAKE · M MUTE</div>
+
+<div class="tc" id="stick"><div id="knob"></div></div>
+<div class="tc" id="abtn">ACTION</div>
+
+<div class="overlay" id="title">
+  <div class="panel">
+    <h1>REALTOR RIVALS</h1>
+    <h2>LAKE COUNTRY — open-world 3D prototype (Phase 1)</h2>
+    <p>Northern Minnesota is yours to drive. Leads are waiting at houses across the map
+      — find the glowing beacons, knock on the door, and nail the pitch before your
+      rival swoops in with full-size caramel rolls.</p>
+    <div class="chars" id="chars"></div>
+    <button class="bigbtn" id="startbtn">START SELLING</button>
+    <p style="font-size:11px;color:var(--slate)">Full open-world build plan in docs/ — this prototype proves the world, driving, and deal loop.</p>
+  </div>
+</div>
+
+<div class="overlay" id="mg">
+  <div class="panel">
+    <div id="mgtitle">THE PITCH</div>
+    <div id="mginfo">Stop the needle in the green to win them over.</div>
+    <div id="mgbarwrap"><div id="mgzone"></div><div id="mgneedle"></div></div>
+    <div style="color:var(--slate);font-size:11px">E / SPACE / TAP</div>
+  </div>
+</div>
+
+<script type="importmap">{ "imports": { "three": "./lib/three.module.min.js" } }</script>
+<script type="module">
+import * as THREE from 'three';
+import Data, { C } from './data/game-data.js';
+
+// ============================================================
+// Realtor Rivals: Lake Country — Phase 1 prototype
+// One file on purpose (like the original 2D game). Phase 2 of
+// docs/BUILD_PLAN.md splits this into src/ modules.
+// ============================================================
+'use strict';
+
+// ---------- seeded RNG ----------
+function mulberry32(seed) {
+  return function () {
+    seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const rng = mulberry32(20260723);
+const rand = (lo, hi) => lo + rng() * (hi - lo);
+const choice = (a) => a[Math.floor(rng() * a.length)];
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const money = (n) => { n = Math.round(n);
+  if (Math.abs(n) >= 1e6) return '$' + (n / 1e6).toFixed(1) + 'M';
+  if (Math.abs(n) >= 1e4) return '$' + Math.round(n / 1e3) + 'K';
+  return '$' + n.toLocaleString('en-US'); };
+
+// ---------- world layout (2D map coords -> meters, TECH doc §3) ----------
+const S = 12; // meters per 2D map unit
+const mapToWorld = (x, y) => ({ x: (x - 310) * S, z: (y - 145) * S });
+// Lakes as ellipses (map coords tuned so towns/roads stay dry; see BUILD_PLAN)
+const LAKES = [
+  { name: 'LAKE BEMIDJI', cx: 235, cy: 87,  rx: 30, ry: 17 },
+  { name: 'LEECH LAKE',   cx: 374, cy: 119, rx: 44, ry: 24 },
+  { name: 'GULL LAKE',    cx: 276, cy: 192, rx: 26, ry: 14 },
+  { name: 'MILLE LACS',   cx: 427, cy: 213, rx: 22, ry: 13 },
+];
+const TOWNS = Data.MAP.towns; // verbatim positions
+// Road polylines in map coords (network per BUILD_PLAN routing notes)
+const ROADS = [
+  [[185,112],[318,150]],                          // Bemidji — Walker
+  [[318,150],[355,232]],                          // Walker — Brainerd
+  [[300,205],[302,228],[355,232]],                // Nisswa — Brainerd
+  [[205,175],[185,112]],                          // Park Rapids — Bemidji
+  [[205,175],[240,205],[300,212],[300,205]],      // Park Rapids — Nisswa (south of Gull)
+  [[318,150],[436,146],[436,100],[415,78]],       // Walker — Grand Rapids (east of Leech)
+  [[355,232],[434,168]],                          // Brainerd — Bank
+  [[355,232],[362,226]], [[355,232],[340,240]],   // office, title spurs
+  [[300,205],[310,198]],                          // coffee spur
+  [[185,112],[190,120]],                          // studio spur
+  [[436,146],[420,140]],                          // seller cabin spur (Leech east shore)
+  [[290,142],[290,118]],                          // lake home spur
+  [[200,160],[230,160]],                          // open house spur
+  [[436,100],[424,95]],                           // inspection house spur
+  [[240,205],[222,218]],[[222,218],[185,242]],    // plaza, systems lab
+  [[300,212],[278,250]],                          // growth lab
+];
+const LOCATIONS = [
+  { key:'office',    label:'THE OFFICE',            x:362, y:226, color:C.sky },
+  { key:'coffee',    label:'MUGS & PLUGS CAFE',     x:310, y:198, color:C.orange },
+  { key:'openhouse', label:'OPEN HOUSE',            x:230, y:160, color:C.yellow },
+  { key:'studio',    label:'VIDEO STUDIO',          x:190, y:120, color:C.purple },
+  { key:'cabin',     label:'SELLER CABIN',          x:420, y:140, color:C.red },
+  { key:'lakehome',  label:'LAKE HOME',             x:290, y:118, color:C.cyan },
+  { key:'starter',   label:'INSPECTION',            x:424, y:95,  color:C.gray },
+  { key:'title',     label:'TITLE CO.',             x:340, y:240, color:C.lime },
+  { key:'bank',      label:'FIRST NORTHERN BANK',   x:434, y:168, color:C.green },
+  { key:'plaza',     label:'NOBLEZA COMMERCIAL PLAZA', x:222, y:218, color:C.blue },
+  { key:'growthlab', label:'SUDDATH GROWTH LAB',    x:278, y:250, color:C.teal },
+  { key:'systemslab',label:'LEWIS SYSTEMS LAB',     x:185, y:242, color:C.navy },
+];
+
+const WORLD_W = 4400, WORLD_D = 3000;     // meters
+const GRID = 220;                          // terrain verts per side (approx)
+const WATER_Y = 0.35;
+
+// road polylines in world coords + segment list for distance queries
+const roadSegs = [];
+for (const pl of ROADS) {
+  for (let i = 0; i < pl.length - 1; i++) {
+    const a = mapToWorld(pl[i][0], pl[i][1]), b = mapToWorld(pl[i + 1][0], pl[i + 1][1]);
+    roadSegs.push({ ax: a.x, az: a.z, bx: b.x, bz: b.z });
+  }
+}
+function distToSeg(px, pz, s) {
+  const dx = s.bx - s.ax, dz = s.bz - s.az;
+  const L2 = dx * dx + dz * dz;
+  let t = L2 ? ((px - s.ax) * dx + (pz - s.az) * dz) / L2 : 0;
+  t = clamp(t, 0, 1);
+  const x = s.ax + t * dx, z = s.az + t * dz;
+  return Math.hypot(px - x, pz - z);
+}
+function roadDist(px, pz) {
+  let d = 1e9;
+  for (const s of roadSegs) { const v = distToSeg(px, pz, s); if (v < d) d = v; }
+  return d;
+}
+function nearestRoadPoint(px, pz) {
+  let best = null, bd = 1e9;
+  for (const s of roadSegs) {
+    const dx = s.bx - s.ax, dz = s.bz - s.az, L2 = dx * dx + dz * dz;
+    let t = L2 ? ((px - s.ax) * dx + (pz - s.az) * dz) / L2 : 0; t = clamp(t, 0, 1);
+    const x = s.ax + t * dx, z = s.az + t * dz, d = Math.hypot(px - x, pz - z);
+    if (d < bd) { bd = d; best = { x, z }; }
+  }
+  return best;
+}
+function lakeSDF(px, pz) { // >1 outside, <1 inside (min over lakes)
+  let m = 1e9;
+  for (const l of LAKES) {
+    const c = mapToWorld(l.cx, l.cy);
+    const v = Math.hypot((px - c.x) / (l.rx * S), (pz - c.z) / (l.ry * S));
+    if (v < m) m = v;
+  }
+  return m;
+}
+
+// ---------- height field ----------
+function vnoise(x, z) { // 2-octave value noise
+  const h = (ix, iz) => {
+    let n = ix * 374761393 + iz * 668265263;
+    n = (n ^ (n >> 13)) * 1274126177;
+    return ((n ^ (n >> 16)) >>> 0) / 4294967295;
+  };
+  let out = 0, amp = 1, f = 1 / 260;
+  for (let o = 0; o < 2; o++) {
+    const xf = x * f, zf = z * f;
+    const ix = Math.floor(xf), iz = Math.floor(zf);
+    const fx = xf - ix, fz = zf - iz;
+    const sx = fx * fx * (3 - 2 * fx), sz = fz * fz * (3 - 2 * fz);
+    const v = lerp(lerp(h(ix, iz), h(ix + 1, iz), sx), lerp(h(ix, iz + 1), h(ix + 1, iz + 1), sx), sz);
+    out += (v - 0.5) * amp;
+    amp *= 0.45; f *= 2.7;
+  }
+  return out;
+}
+const HX = GRID + 1, HZ = Math.round(GRID * WORLD_D / WORLD_W) + 1;
+const cellW = WORLD_W / (HX - 1), cellD = WORLD_D / (HZ - 1);
+const hgrid = new Float32Array(HX * HZ);
+(function buildHeights() {
+  for (let j = 0; j < HZ; j++) for (let i = 0; i < HX; i++) {
+    const x = -WORLD_W / 2 + i * cellW, z = -WORLD_D / 2 + j * cellD;
+    let y = 3.5 + vnoise(x, z) * 7;
+    const lk = lakeSDF(x, z);
+    if (lk < 1.25) { // carve lake bowl with soft shore
+      const t = clamp((1.25 - lk) / 0.45, 0, 1);
+      y = lerp(y, -3.5, Math.min(1, t) * (lk < 1 ? 1 : t));
+      if (lk < 1) y = Math.min(y, lerp(0.2, -3.5, clamp((1 - lk) / 0.35, 0, 1)));
+    }
+    const rd = roadDist(x, z);
+    if (rd < 30) { const t = 1 - rd / 30; y = lerp(y, Math.max(y * 0.25, 1.0), t * t); }
+    hgrid[j * HX + i] = y;
+  }
+})();
+function heightAt(x, z) {
+  const gx = clamp((x + WORLD_W / 2) / cellW, 0, HX - 1.001);
+  const gz = clamp((z + WORLD_D / 2) / cellD, 0, HZ - 1.001);
+  const i = Math.floor(gx), j = Math.floor(gz), fx = gx - i, fz = gz - j;
+  const a = hgrid[j * HX + i], b = hgrid[j * HX + i + 1];
+  const c2 = hgrid[(j + 1) * HX + i], d = hgrid[(j + 1) * HX + i + 1];
+  return lerp(lerp(a, b, fx), lerp(c2, d, fx), fz);
+}
+
+// ---------- three.js scene ----------
+const canvas = document.getElementById('game');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.6));
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(62, 1, 0.5, 1400);
+scene.fog = new THREE.Fog(0x9fc9e8, 250, 950);
+
+const hemi = new THREE.HemisphereLight(0xbfe3ff, 0x3a5a3a, 0.9);
+scene.add(hemi);
+const sun = new THREE.DirectionalLight(0xfff2d8, 1.4);
+sun.position.set(300, 400, 150);
+scene.add(sun);
+
+function onResize() {
+  renderer.setSize(window.innerWidth, window.innerHeight, false);
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', onResize); onResize();
+
+// terrain mesh (vertex colored)
+(function buildTerrain() {
+  const geo = new THREE.PlaneGeometry(WORLD_W, WORLD_D, HX - 1, HZ - 1);
+  geo.rotateX(-Math.PI / 2);
+  const pos = geo.attributes.position;
+  const colors = new Float32Array(pos.count * 3);
+  const grass = new THREE.Color(0x5da452), dark = new THREE.Color(0x3f7d46);
+  const sand = new THREE.Color(0xc9b57a), rock = new THREE.Color(0x8a9a7a);
+  const tmp = new THREE.Color();
+  for (let k = 0; k < pos.count; k++) {
+    const x = pos.getX(k), z = pos.getZ(k);
+    const y = heightAt(x, z);
+    pos.setY(k, y);
+    const n = vnoise(x * 3.1 + 999, z * 3.1);
+    if (y < WATER_Y + 0.6 && lakeSDF(x, z) < 1.5) tmp.copy(sand);
+    else if (y > 8.2) tmp.copy(rock);
+    else tmp.copy(grass).lerp(dark, clamp(n + 0.5, 0, 1));
+    if (roadDist(x, z) < 8) tmp.set(0x5c5c64); // asphalt shoulder tint under ribbon
+    colors[k * 3] = tmp.r; colors[k * 3 + 1] = tmp.g; colors[k * 3 + 2] = tmp.b;
+  }
+  geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  geo.computeVertexNormals();
+  const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true }));
+  mesh.matrixAutoUpdate = false;
+  scene.add(mesh);
+})();
+
+// water
+for (const l of LAKES) {
+  const c = mapToWorld(l.cx, l.cy);
+  const geo = new THREE.CircleGeometry(1, 48);
+  geo.rotateX(-Math.PI / 2);
+  const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({
+    color: 0x3f8fd4, transparent: true, opacity: 0.88 }));
+  m.scale.set(l.rx * S, 1, l.ry * S);
+  m.position.set(c.x, WATER_Y, c.z);
+  m.matrixAutoUpdate = false; m.updateMatrix();
+  scene.add(m);
+}
+
+// road ribbons (draped quads per segment)
+(function buildRoads() {
+  const verts = [], HW = 5.2;
+  for (const s of roadSegs) {
+    const dx = s.bx - s.ax, dz = s.bz - s.az, L = Math.hypot(dx, dz);
+    if (L < 1) continue;
+    const nx = -dz / L, nz = dx / L;
+    const steps = Math.max(2, Math.ceil(L / 22));
+    for (let i = 0; i < steps; i++) {
+      const t0 = i / steps, t1 = (i + 1) / steps;
+      const x0 = s.ax + dx * t0, z0 = s.az + dz * t0;
+      const x1 = s.ax + dx * t1, z1 = s.az + dz * t1;
+      const y0 = heightAt(x0, z0) + 0.12, y1 = heightAt(x1, z1) + 0.12;
+      const q = [
+        [x0 + nx * HW, y0, z0 + nz * HW], [x0 - nx * HW, y0, z0 - nz * HW], [x1 - nx * HW, y1, z1 - nz * HW],
+        [x0 + nx * HW, y0, z0 + nz * HW], [x1 - nx * HW, y1, z1 - nz * HW], [x1 + nx * HW, y1, z1 + nz * HW],
+      ];
+      for (const v of q) verts.push(...v);
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(verts), 3));
+  geo.computeVertexNormals();
+  const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: 0x525258 }));
+  mesh.matrixAutoUpdate = false;
+  scene.add(mesh);
+})();
+
+// ---------- buildings, towns, labels ----------
+const colliders = []; // {x,z,hx,hz}
+function makeLabel(text, color = '#f4f4f4', scale = 1) {
+  const c = document.createElement('canvas');
+  const ctx = c.getContext('2d');
+  ctx.font = 'bold 28px monospace';
+  const w = Math.ceil(ctx.measureText(text).width) + 20;
+  c.width = w; c.height = 44;
+  const ctx2 = c.getContext('2d');
+  ctx2.fillStyle = 'rgba(26,28,44,0.85)'; ctx2.fillRect(0, 0, w, 44);
+  ctx2.font = 'bold 28px monospace'; ctx2.fillStyle = color;
+  ctx2.textAlign = 'center'; ctx2.textBaseline = 'middle';
+  ctx2.fillText(text, w / 2, 23);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: true }));
+  sp.scale.set(w / 44 * 6 * scale, 6 * scale, 1);
+  return sp;
+}
+function box(w, h, d, color) {
+  return new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshLambertMaterial({ color }));
+}
+function buildHouse(x, z, opts = {}) {
+  const g = new THREE.Group();
+  const w = opts.w || rand(8, 12), d = opts.d || rand(7, 10), h = opts.h || rand(4, 6);
+  const bodyCol = opts.color ?? choice([0xd8cfc0, 0xb8c4cf, 0xc9a886, 0x9fb28f, 0xd4b8b0]);
+  const body = box(w, h, d, bodyCol); body.position.y = h / 2; g.add(body);
+  const roof = new THREE.Mesh(new THREE.CylinderGeometry(0, w * 0.72, h * 0.7, 4),
+    new THREE.MeshLambertMaterial({ color: opts.roof ?? 0x7a4a3a }));
+  roof.rotation.y = Math.PI / 4; roof.position.y = h + h * 0.35;
+  roof.scale.z = d / w; g.add(roof);
+  const y = heightAt(x, z);
+  g.position.set(x, y, z);
+  scene.add(g);
+  colliders.push({ x, z, hx: w / 2 + 1, hz: d / 2 + 1 });
+  return g;
+}
+// towns
+for (const t of TOWNS) {
+  const c = mapToWorld(t.x, t.y);
+  const n = 8 + Math.floor(rng() * 8);
+  for (let i = 0; i < n; i++) {
+    for (let tries = 0; tries < 10; tries++) {
+      const a = rng() * Math.PI * 2, r = rand(22, 90);
+      const x = c.x + Math.cos(a) * r, z = c.z + Math.sin(a) * r;
+      if (lakeSDF(x, z) < 1.15 || roadDist(x, z) < 10) continue;
+      buildHouse(x, z);
+      break;
+    }
+  }
+  // water tower with town name
+  let wx = c.x + 40, wz = c.z - 40;
+  if (lakeSDF(wx, wz) < 1.2) { wx = c.x - 40; wz = c.z + 40; }
+  const ty = heightAt(wx, wz);
+  const tower = new THREE.Group();
+  const legs = box(1.6, 18, 1.6, 0x8899a6); legs.position.y = 9; tower.add(legs);
+  const tank = new THREE.Mesh(new THREE.SphereGeometry(6, 12, 10),
+    new THREE.MeshLambertMaterial({ color: 0xa8c4d4 }));
+  tank.position.y = 20; tower.add(tank);
+  tower.position.set(wx, ty, wz); scene.add(tower);
+  const lab = makeLabel(t.name, '#ffcd75', 1.5); lab.position.set(wx, ty + 31, wz); scene.add(lab);
+}
+// key locations
+const locationObjs = [];
+for (const L of LOCATIONS) {
+  const c = mapToWorld(L.x, L.y);
+  const g = buildHouse(c.x, c.z, { w: 13, d: 11, h: 6.5, color: new THREE.Color(L.color).getHex(), roof: 0x333c57 });
+  const lab = makeLabel(L.label, '#73eff7', 1.1);
+  lab.position.set(0, 14, 0); g.add(lab);
+  locationObjs.push({ ...L, wx: c.x, wz: c.z });
+}
+// Paul Bunyan & Babe (Bemidji)
+(function landmarks() {
+  const c = mapToWorld(196, 100);
+  const y = heightAt(c.x, c.z);
+  const paul = new THREE.Group();
+  const legs2 = box(3.4, 6, 2.2, 0x29366f); legs2.position.y = 3; paul.add(legs2);
+  const shirt = box(4.2, 5, 2.6, 0xb13e53); shirt.position.y = 8; paul.add(shirt);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(1.5, 10, 8), new THREE.MeshLambertMaterial({ color: 0xe8b890 }));
+  head.position.y = 11.6; paul.add(head);
+  const beard = box(2.2, 1.6, 1, 0x5a3a22); beard.position.set(0, 10.8, 0.9); paul.add(beard);
+  const axe = box(0.6, 9, 0.6, 0x7a4a3a); axe.position.set(3, 5.5, 0); paul.add(axe);
+  paul.position.set(c.x, y, c.z); scene.add(paul);
+  const babe = new THREE.Group();
+  const bod = box(7, 4, 3.4, 0x41a6f6); bod.position.y = 3.4; babe.add(bod);
+  const bhead = box(2.6, 2.4, 2.4, 0x41a6f6); bhead.position.set(4.4, 4.6, 0); babe.add(bhead);
+  const horn = box(3.8, 0.5, 0.5, 0xf4f4f4); horn.position.set(4.4, 6, 0); babe.add(horn);
+  const blegs = box(6, 2.8, 2.6, 0x3b5dc9); blegs.position.y = 1.2; babe.add(blegs);
+  babe.position.set(c.x + 10, y, c.z + 3); scene.add(babe);
+  const lab = makeLabel('PAUL BUNYAN & BABE', '#a7f070', 1);
+  lab.position.set(c.x + 4, y + 16, c.z); scene.add(lab);
+  colliders.push({ x: c.x, z: c.z, hx: 3, hz: 2 }, { x: c.x + 10, z: c.z + 3, hx: 4, hz: 2 });
+})();
+
+// ---------- forest (instanced) ----------
+const TREE_HASH = new Map(); // spatial hash for cheap collisions
+(function forest() {
+  const isMobile = matchMedia('(pointer: coarse)').matches;
+  const COUNT = isMobile ? 7000 : 14000;
+  const trunkGeo = new THREE.CylinderGeometry(0.35, 0.55, 3, 5);
+  const canGeo = new THREE.ConeGeometry(2.6, 7.5, 6);
+  const trunk = new THREE.InstancedMesh(trunkGeo, new THREE.MeshLambertMaterial({ color: 0x6a4a32 }), COUNT);
+  const canopy = new THREE.InstancedMesh(canGeo, new THREE.MeshLambertMaterial({ color: 0x2e6b3e }), COUNT);
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3();
+  const col = new THREE.Color();
+  let placed = 0, guard = 0;
+  while (placed < COUNT && guard++ < COUNT * 12) {
+    const x = rand(-WORLD_W / 2 + 30, WORLD_W / 2 - 30);
+    const z = rand(-WORLD_D / 2 + 30, WORLD_D / 2 - 30);
+    if (lakeSDF(x, z) < 1.12) continue;
+    if (roadDist(x, z) < 14) continue;
+    let nearTown = false;
+    for (const t of TOWNS) { const c = mapToWorld(t.x, t.y); if (Math.hypot(x - c.x, z - c.z) < 110) { nearTown = true; break; } }
+    if (nearTown && rng() < 0.8) continue;
+    const y = heightAt(x, z);
+    if (y < WATER_Y + 0.2) continue;
+    const sc = rand(0.7, 1.7);
+    p.set(x, y + 1.5 * sc, z); s.set(sc, sc, sc); q.identity();
+    m.compose(p, q, s); trunk.setMatrixAt(placed, m);
+    p.set(x, y + (3 + 3.4) * sc, z); m.compose(p, q, s); canopy.setMatrixAt(placed, m);
+    col.setHSL(0.33 + rng() * 0.05, 0.45, 0.28 + rng() * 0.12);
+    canopy.setColorAt(placed, col);
+    const key = (Math.floor(x / 24)) + ':' + (Math.floor(z / 24));
+    if (!TREE_HASH.has(key)) TREE_HASH.set(key, []);
+    TREE_HASH.get(key).push([x, z]);
+    placed++;
+  }
+  trunk.count = placed; canopy.count = placed;
+  trunk.instanceMatrix.needsUpdate = true; canopy.instanceMatrix.needsUpdate = true;
+  if (canopy.instanceColor) canopy.instanceColor.needsUpdate = true;
+  scene.add(trunk, canopy);
+})();
+function treeNear(x, z, r) {
+  const ci = Math.floor(x / 24), cj = Math.floor(z / 24);
+  for (let j = cj - 1; j <= cj + 1; j++) for (let i = ci - 1; i <= ci + 1; i++) {
+    const cell = TREE_HASH.get(i + ':' + j);
+    if (!cell) continue;
+    for (const t of cell) if (Math.hypot(x - t[0], z - t[1]) < r) return t;
+  }
+  return null;
+}
+
+// ---------- player + car ----------
+let picked = 'malcolm';
+function buildCharacter(colorHex, accentHex) {
+  const g = new THREE.Group();
+  const legs = box(0.65, 0.85, 0.4, 0x333c57); legs.position.y = 0.42; g.add(legs);
+  const torso = box(0.8, 0.85, 0.5, colorHex); torso.position.y = 1.25; g.add(torso);
+  const armL = box(0.22, 0.8, 0.28, colorHex); armL.position.set(-0.55, 1.25, 0); g.add(armL);
+  const armR = armL.clone(); armR.position.x = 0.55; g.add(armR);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.34, 10, 8), new THREE.MeshLambertMaterial({ color: 0xe8b890 }));
+  head.position.y = 2.0; g.add(head);
+  const cap = box(0.55, 0.18, 0.55, accentHex); cap.position.y = 2.22; g.add(cap);
+  g.userData.limbs = { armL, armR, legs };
+  return g;
+}
+function buildCar(colorHex) {
+  const g = new THREE.Group();
+  const body = box(2.1, 0.8, 4.4, colorHex); body.position.y = 0.85; g.add(body);
+  const cab = box(1.8, 0.7, 2.2, 0x9fd7ef); cab.position.set(0, 1.55, -0.2); g.add(cab);
+  const wheels = [];
+  const wg = new THREE.CylinderGeometry(0.45, 0.45, 0.4, 10);
+  wg.rotateZ(Math.PI / 2);
+  for (const [wx, wz] of [[-1.05, 1.5], [1.05, 1.5], [-1.05, -1.6], [1.05, -1.6]]) {
+    const w = new THREE.Mesh(wg, new THREE.MeshLambertMaterial({ color: 0x1a1c2c }));
+    w.position.set(wx, 0.45, wz); g.add(w); wheels.push(w);
+  }
+  const hl = box(0.3, 0.2, 0.1, 0xfff6c8); hl.position.set(-0.6, 0.9, 2.25); g.add(hl);
+  const hr = hl.clone(); hr.position.x = 0.6; g.add(hr);
+  const tl = box(0.3, 0.2, 0.1, 0xb13e53); tl.position.set(-0.6, 0.9, -2.25); g.add(tl);
+  const tr = tl.clone(); tr.position.x = 0.6; g.add(tr);
+  g.userData.wheels = wheels;
+  const shadow = new THREE.Mesh(new THREE.CircleGeometry(2.6, 16),
+    new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.25 }));
+  shadow.rotation.x = -Math.PI / 2; shadow.position.y = 0.03; g.add(shadow);
+  return g;
+}
+let playerMesh = null, carMesh = null;
+const player = { x: 0, z: 0, heading: 0, mode: 'car' };
+const car = { x: 0, z: 0, heading: 0, speed: 0, vx: 0, vz: 0 };
+{
+  // spawn on the Brainerd–Walker highway, pointed at Walker
+  const a = mapToWorld(352, 224), b = mapToWorld(318, 150);
+  car.x = a.x; car.z = a.z;
+  car.heading = Math.atan2(b.x - a.x, -(b.z - a.z));
+  player.x = car.x; player.z = car.z;
+}
+
+// ---------- leads ----------
+const state = {
+  cash: 1200, sold: 0, followers: 150, day: 1, month: 0, tod: 8 * 60, // minutes
+  started: false, muted: false,
+};
+const leads = [];
+const LEAD_FIRST_NAMES = Data.LEAD_NAMES;
+function pickLeadType() {
+  const ch = Data.CHARACTERS[picked];
+  const items = Data.LEAD_TYPES.map(t => ({ ...t, weight: (t.weight || 1) * ((t.lake && ch.lakeLeadWeight) ? ch.lakeLeadWeight : 1) }));
+  const total = items.reduce((s2, it) => s2 + it.weight, 0);
+  let r = rng() * total;
+  for (const it of items) { r -= it.weight; if (r <= 0) return it; }
+  return items[0];
+}
+function spawnLead() {
+  const type = pickLeadType();
+  let x, z;
+  for (let tries = 0; tries < 40; tries++) {
+    if (type.lake) { // shoreline placement
+      const l = choice(LAKES);
+      const a = rng() * Math.PI * 2;
+      const c = mapToWorld(l.cx, l.cy);
+      x = c.x + Math.cos(a) * (l.rx * S * 1.22);
+      z = c.z + Math.sin(a) * (l.ry * S * 1.22);
+    } else {
+      const s2 = choice(roadSegs);
+      const t = rng();
+      const nx = -(s2.bz - s2.az), nz = (s2.bx - s2.ax);
+      const L = Math.hypot(nx, nz) || 1;
+      const side = rng() < 0.5 ? 1 : -1;
+      x = s2.ax + (s2.bx - s2.ax) * t + nx / L * side * rand(16, 30);
+      z = s2.az + (s2.bz - s2.az) * t + nz / L * side * rand(16, 30);
+    }
+    if (lakeSDF(x, z) < 1.1) continue;
+    if (heightAt(x, z) < WATER_Y + 0.4) continue;
+    if (Math.abs(x) > WORLD_W / 2 - 40 || Math.abs(z) > WORLD_D / 2 - 40) continue;
+    let clash = false;
+    for (const c of colliders) if (Math.hypot(x - c.x, z - c.z) < 16) { clash = true; break; }
+    if (clash) continue;
+    break;
+  }
+  const value = Math.round(rand(type.value[0], type.value[1]) / 1000) * 1000;
+  const house = buildHouse(x, z, { w: 9, d: 8, h: 4.5 });
+  const beacon = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 30, 8, 1, true),
+    new THREE.MeshBasicMaterial({ color: new THREE.Color(C.orange), transparent: true, opacity: 0.35, side: THREE.DoubleSide }));
+  beacon.position.y = 15; house.add(beacon);
+  const icon = makeLabel('$ ' + choice(LEAD_FIRST_NAMES), '#ffcd75', 0.9);
+  icon.position.y = 12; house.add(icon);
+  leads.push({ type, value, x, z, house, beacon, icon,
+    name: icon.material.map ? icon : null, label: icon,
+    warmth: type.warmth, bornAt: performance.now(), warned: false, stealAt: null });
+}
+
+// ---------- audio (tiny WebAudio port) ----------
+const Audio2 = {
+  ctx: null,
+  ensure() { if (!this.ctx) { const AC = window.AudioContext || window.webkitAudioContext; if (AC) this.ctx = new AC(); }
+    if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume(); return this.ctx; },
+  beep(freq, dur = 0.08, type = 'square', vol = 0.1, slide = 0) {
+    if (state.muted) return; const ctx = this.ensure(); if (!ctx) return;
+    const t = ctx.currentTime, osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.type = type; osc.frequency.setValueAtTime(freq, t);
+    if (slide) osc.frequency.linearRampToValueAtTime(Math.max(30, freq + slide), t + dur);
+    gain.gain.setValueAtTime(vol, t); gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
+    osc.connect(gain).connect(ctx.destination); osc.start(t); osc.stop(t + dur + 0.02);
+  },
+  seq(notes, step = 0.07, type = 'square', vol = 0.1) {
+    notes.forEach((f, i) => { if (f) setTimeout(() => this.beep(f, step * 0.9, type, vol), i * step * 1000); });
+  },
+  cash() { this.seq([988, 1319, 988, 1568], 0.05, 'square', 0.12); },
+  good() { this.seq([523, 659, 784], 0.07); },
+  bad() { this.seq([330, 262, 196], 0.09, 'sawtooth', 0.08); },
+  select() { this.seq([660, 880], 0.06); },
+  thud() { this.beep(120, 0.12, 'sawtooth', 0.14, -60); },
+};
+
+// ---------- input ----------
+const keys = {}, pressed = {};
+window.addEventListener('keydown', (e) => {
+  if ([' ', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) e.preventDefault();
+  const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  if (!keys[k]) pressed[k] = true;
+  keys[k] = true;
+  Audio2.ensure();
+});
+window.addEventListener('keyup', (e) => { const k = e.key.length === 1 ? e.key.toLowerCase() : e.key; keys[k] = false; });
+// touch
+const touchState = { active: false, dx: 0, dy: 0 };
+const isTouch = matchMedia('(pointer: coarse)').matches;
+if (isTouch) document.body.classList.add('touch');
+const stick = document.getElementById('stick'), knob = document.getElementById('knob');
+let stickId = null;
+stick.addEventListener('pointerdown', (e) => { stickId = e.pointerId; stick.setPointerCapture(e.pointerId); moveStick(e); Audio2.ensure(); });
+stick.addEventListener('pointermove', (e) => { if (e.pointerId === stickId) moveStick(e); });
+const endStick = (e) => { if (e.pointerId === stickId) { stickId = null; touchState.active = false; touchState.dx = 0; touchState.dy = 0; knob.style.transform = 'translate(-50%,-50%)'; } };
+stick.addEventListener('pointerup', endStick); stick.addEventListener('pointercancel', endStick);
+function moveStick(e) {
+  const r = stick.getBoundingClientRect();
+  let dx = (e.clientX - (r.left + r.width / 2)) / (r.width / 2);
+  let dy = (e.clientY - (r.top + r.height / 2)) / (r.height / 2);
+  const m = Math.hypot(dx, dy); if (m > 1) { dx /= m; dy /= m; }
+  touchState.active = true; touchState.dx = dx; touchState.dy = dy;
+  knob.style.transform = `translate(calc(-50% + ${dx * 34}px), calc(-50% + ${dy * 34}px))`;
+}
+document.getElementById('abtn').addEventListener('pointerdown', (e) => { e.preventDefault(); pressed['e'] = true; Audio2.ensure(); });
+
+// ---------- HUD ----------
+const $ = (id) => document.getElementById(id);
+function toast(msg, kind = '') {
+  const el = document.createElement('div');
+  el.className = 'toast ' + kind; el.textContent = msg;
+  $('toasts').appendChild(el);
+  setTimeout(() => el.remove(), 5200);
+  while ($('toasts').children.length > 3) $('toasts').firstChild.remove();
+}
+function updateHUD() {
+  $('hudcash').textContent = money(state.cash);
+  $('hudsold').innerHTML = 'SOLD: ' + state.sold + ' · <span style="color:var(--sky)">FOLLOWERS: ' + state.followers + '</span>';
+  const mins = Math.floor(state.tod);
+  let h = Math.floor(mins / 60), mm = (mins % 60);
+  const ampm = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12;
+  $('clock').textContent = Data.SEASON.months[state.month] + ' · DAY ' + state.day + ' · ' + h + ':' + String(mm).padStart(2, '0') + ' ' + ampm;
+}
+
+// minimap
+const mmc = $('minimap'), mm = mmc.getContext('2d');
+const mmBase = document.createElement('canvas'); mmBase.width = mmc.width; mmBase.height = mmc.height;
+(function prerenderMinimap() {
+  const b = mmBase.getContext('2d');
+  b.fillStyle = '#22301f'; b.fillRect(0, 0, mmBase.width, mmBase.height);
+  const px = (x) => (x + WORLD_W / 2) / WORLD_W * mmBase.width;
+  const pz = (z) => (z + WORLD_D / 2) / WORLD_D * mmBase.height;
+  b.strokeStyle = '#4a4a52'; b.lineWidth = 2;
+  for (const s of roadSegs) { b.beginPath(); b.moveTo(px(s.ax), pz(s.az)); b.lineTo(px(s.bx), pz(s.bz)); b.stroke(); }
+  b.fillStyle = '#3f8fd4';
+  for (const l of LAKES) {
+    const c = mapToWorld(l.cx, l.cy);
+    b.beginPath(); b.ellipse(px(c.x), pz(c.z), l.rx * S / WORLD_W * mmBase.width, l.ry * S / WORLD_D * mmBase.height, 0, 0, Math.PI * 2); b.fill();
+  }
+  b.fillStyle = '#ffcd75'; b.font = 'bold 9px monospace'; b.textAlign = 'center';
+  for (const t of TOWNS) { const c = mapToWorld(t.x, t.y); b.fillRect(px(c.x) - 2, pz(c.z) - 2, 4, 4); b.fillText(t.name, px(c.x), pz(c.z) - 5); }
+})();
+function drawMinimap() {
+  mm.drawImage(mmBase, 0, 0);
+  const px = (x) => (x + WORLD_W / 2) / WORLD_W * mmc.width;
+  const pz = (z) => (z + WORLD_D / 2) / WORLD_D * mmc.height;
+  for (const l of leads) {
+    mm.fillStyle = l.stealAt ? '#b13e53' : '#ef7d57';
+    mm.beginPath(); mm.arc(px(l.x), pz(l.z), 4, 0, Math.PI * 2); mm.fill();
+  }
+  const fx = player.mode === 'car' ? car.x : player.x;
+  const fz = player.mode === 'car' ? car.z : player.z;
+  const hd = player.mode === 'car' ? car.heading : player.heading;
+  mm.save(); mm.translate(px(fx), pz(fz)); mm.rotate(hd);
+  mm.fillStyle = '#f4f4f4';
+  mm.beginPath(); mm.moveTo(0, -6); mm.lineTo(4, 5); mm.lineTo(-4, 5); mm.closePath(); mm.fill();
+  mm.restore();
+}
+
+// ---------- title / character select ----------
+(function buildTitle() {
+  const wrap = $('chars');
+  for (const id of ['malcolm', 'bridger']) {
+    const ch = Data.CHARACTERS[id];
+    const el = document.createElement('div');
+    el.className = 'charcard' + (id === picked ? ' sel' : '');
+    el.innerHTML = '<div class="nm" style="color:' + (id === 'malcolm' ? 'var(--lime)' : 'var(--yellow)') + '">' + ch.name +
+      '</div><div class="ti">' + ch.title + '</div><div class="st">' + ch.strengths.join('<br>') + '</div>';
+    el.addEventListener('click', () => {
+      picked = id; Audio2.select();
+      document.querySelectorAll('.charcard').forEach(c => c.classList.remove('sel'));
+      el.classList.add('sel');
+    });
+    wrap.appendChild(el);
+  }
+  $('startbtn').addEventListener('click', startGame);
+})();
+function startGame() {
+  Audio2.ensure(); Audio2.good();
+  $('title').style.display = 'none';
+  const ch = Data.CHARACTERS[picked];
+  $('hudwho').textContent = ch.name + ' — ' + ch.title;
+  playerMesh = buildCharacter(picked === 'malcolm' ? 0x38b764 : 0x29366f, picked === 'malcolm' ? 0x41a6f6 : 0xffcd75);
+  carMesh = buildCar(picked === 'malcolm' ? 0x38b764 : 0x29366f);
+  scene.add(playerMesh, carMesh);
+  playerMesh.visible = false;
+  for (let i = 0; i < 4; i++) spawnLead();
+  const rival = Data.CHARACTERS[picked === 'malcolm' ? 'bridger' : 'malcolm'];
+  toast('Welcome to lake country, ' + ch.name + '. ' + rival.name + ' is already out there closing. Find the beacons!', 'good');
+  state.started = true;
+}
+
+// ---------- minigame ----------
+const mg = { active: false, t: 0, zoneA: 0, zoneW: 0, lead: null, dir: 1, pos: 0 };
+function startMinigame(lead) {
+  mg.active = true; mg.lead = lead; mg.pos = 0; mg.dir = 1;
+  const warm = clamp(lead.warmth / 100, 0.1, 0.95);
+  const ch = Data.CHARACTERS[picked];
+  let zw = 0.13 + warm * 0.28;
+  if (lead.type.lake && ch.id === 'malcolm') zw *= 1.2;   // lake specialist
+  if (ch.negotiateBonus) zw *= (1 + ch.negotiateBonus * 0.6); // the closer closes
+  mg.zoneW = clamp(zw, 0.1, 0.55);
+  mg.zoneA = rand(0.08, 0.9 - mg.zoneW);
+  $('mgtitle').textContent = lead.type.label + ' · ' + money(lead.value);
+  $('mginfo').textContent = 'Warmth ' + Math.round(lead.warmth) + ' — stop the needle in the green!';
+  $('mgzone').style.left = (mg.zoneA * 100) + '%';
+  $('mgzone').style.width = (mg.zoneW * 100) + '%';
+  $('mg').style.display = 'flex';
+}
+$('mg').addEventListener('pointerdown', () => { if (mg.active) resolveMinigame(); });
+function resolveMinigame() {
+  mg.active = false; $('mg').style.display = 'none';
+  const l = mg.lead;
+  const hit = mg.pos >= mg.zoneA && mg.pos <= mg.zoneA + mg.zoneW;
+  if (hit) {
+    const rate = 0.027; // same commission as the 2D game
+    const comm = Math.round(l.value * rate);
+    state.cash += comm; state.sold += 1;
+    state.followers += 10 + Math.floor(rng() * 40);
+    Audio2.cash();
+    toast('SOLD! ' + l.type.label + ' — ' + money(l.value) + '  (+' + money(comm) + ' commission)', 'cash');
+    // sold sign: beacon goes green then the lead retires
+    l.beacon.material.color.set(C.green); l.beacon.material.opacity = 0.5;
+    setTimeout(() => { l.house.remove(l.beacon); l.house.remove(l.label); }, 4000);
+    leads.splice(leads.indexOf(l), 1);
+    setTimeout(spawnLead, 2500);
+    if (state.sold % 5 === 0) toast('The rival is fuming. "' + (picked === 'malcolm'
+      ? 'Nice sale. Adorable, even.' : 'I taught him that.') + '"', 'good');
+  } else {
+    l.warmth = Math.max(5, l.warmth - 12);
+    Audio2.bad();
+    toast('They said they want to "sleep on it, maybe till fall." Warmth down — try again.', 'bad');
+  }
+}
+
+// ---------- rival pressure (steal timer, prototype version) ----------
+function rivalTick(now) {
+  if (!leads.length) return;
+  let oldest = leads[0];
+  for (const l of leads) if (l.bornAt < oldest.bornAt) oldest = l;
+  const age = (now - oldest.bornAt) / 1000;
+  if (age > 150 && !oldest.warned) {
+    oldest.warned = true; oldest.stealAt = now + 45000;
+    const rival = Data.CHARACTERS[picked === 'malcolm' ? 'bridger' : 'malcolm'];
+    toast('⚠ ' + rival.name + "'s car was spotted near " + oldest.type.label + ' (' + money(oldest.value) + '). 45 seconds!', 'bad');
+    Audio2.thud();
+    oldest.beacon.material.color.set(C.red);
+  }
+  if (oldest.stealAt && now > oldest.stealAt) {
+    toast('DEAL SNIPED! A competing agent swooped in with cookies and a lower commission.', 'bad');
+    Audio2.bad();
+    scene.remove(oldest.house);
+    leads.splice(leads.indexOf(oldest), 1);
+    setTimeout(spawnLead, 2500);
+  }
+}
+
+// ---------- day/night ----------
+const DAY_LEN = 480; // seconds per full day
+const skyDay = new THREE.Color(0x9fc9e8), skyDusk = new THREE.Color(0xef7d57);
+const skyNight = new THREE.Color(0x1a1c2c);
+const tmpSky = new THREE.Color();
+function dayNight(elapsed) {
+  state.tod += (elapsed / DAY_LEN) * 1440;
+  if (state.tod >= 1440) {
+    state.tod -= 1440; state.day += 1;
+    if (state.day > Data.SEASON.daysPerMonth) {
+      state.day = 1; state.month = (state.month + 1) % Data.SEASON.months.length;
+    }
+    toast('A new day in ' + Data.SEASON.months[state.month] + '. Fresh leads are out there.', 'good');
+  }
+  const t = state.tod / 1440;               // 0..1
+  const sunAng = (t - 0.25) * Math.PI * 2;  // sunrise 6am
+  sun.position.set(Math.cos(sunAng) * 500, Math.sin(sunAng) * 500, 150);
+  const dayness = clamp(Math.sin(sunAng) * 1.6 + 0.25, 0, 1);
+  const duskness = clamp(1 - Math.abs(Math.sin(sunAng)) * 3, 0, 1) * dayness;
+  tmpSky.copy(skyNight).lerp(skyDay, dayness).lerp(skyDusk, duskness * 0.55);
+  scene.background = scene.background || new THREE.Color();
+  scene.background.copy(tmpSky);
+  scene.fog.color.copy(tmpSky);
+  sun.intensity = 0.15 + dayness * 1.25;
+  hemi.intensity = 0.35 + dayness * 0.75;
+}
+
+// ---------- main loop ----------
+const CAR_ACCEL = 26, CAR_MAX = 46, CAR_REV = -10, CAR_DRAG = 0.35, CAR_BRAKE = 55;
+let camPos = new THREE.Vector3(0, 40, 60);
+const camTarget = new THREE.Vector3();
+let last = performance.now();
+const promptEl = $('prompt');
+
+function loop(now) {
+  requestAnimationFrame(loop);
+  const dt = Math.min(0.05, (now - last) / 1000);
+  last = now;
+  if (!state.started) { renderer.render(scene, camera); return; }
+
+  dayNight(dt);
+
+  // ------- input mapping -------
+  let fwd = 0, steer = 0;
+  if (keys['w'] || keys['ArrowUp']) fwd += 1;
+  if (keys['s'] || keys['ArrowDown']) fwd -= 1;
+  if (keys['a'] || keys['ArrowLeft']) steer -= 1;
+  if (keys['d'] || keys['ArrowRight']) steer += 1;
+  if (touchState.active) { fwd += -touchState.dy; steer += touchState.dx; }
+  fwd = clamp(fwd, -1, 1); steer = clamp(steer, -1, 1);
+  const braking = keys[' '];
+
+  // a lead pitch takes priority over enter/exit on the same E press
+  let nearLead = null, nearLeadDist = 1e9;
+  for (const l of leads) {
+    const d = Math.hypot(player.x - l.x, player.z - l.z);
+    if (d < nearLeadDist) { nearLeadDist = d; nearLead = l; }
+  }
+  const leadInRange = nearLead && nearLeadDist < 14;
+
+  if (mg.active) {
+    mg.pos += mg.dir * dt * 0.85;
+    if (mg.pos > 1) { mg.pos = 1; mg.dir = -1; }
+    if (mg.pos < 0) { mg.pos = 0; mg.dir = 1; }
+    $('mgneedle').style.left = 'calc(' + (mg.pos * 100) + '% - 2px)';
+    if (pressed['e'] || pressed[' '] || pressed['Enter']) resolveMinigame();
+  } else if (player.mode === 'car') {
+    // ------- arcade car -------
+    car.speed += (fwd > 0 ? fwd * CAR_ACCEL : fwd * 14) * dt;
+    car.speed -= car.speed * CAR_DRAG * dt;
+    if (braking) car.speed -= Math.sign(car.speed) * CAR_BRAKE * dt;
+    car.speed = clamp(car.speed, CAR_REV, CAR_MAX);
+    const onRoad = roadDist(car.x, car.z) < 8;
+    if (!onRoad) car.speed *= (1 - 0.55 * dt); // grass is slow, gravel is drifty
+    const sf = clamp(Math.abs(car.speed) / 12, 0, 1);
+    car.heading += steer * 1.9 * sf * Math.sign(car.speed) * dt;
+    const dirx = Math.sin(car.heading), dirz = -Math.cos(car.heading);
+    // grip: velocity chases heading
+    const grip = onRoad ? 6.5 : 3.4;
+    car.vx = lerp(car.vx, dirx * car.speed, clamp(grip * dt, 0, 1));
+    car.vz = lerp(car.vz, dirz * car.speed, clamp(grip * dt, 0, 1));
+    let nx = car.x + car.vx * dt, nz = car.z + car.vz * dt;
+    // collisions
+    nx = clamp(nx, -WORLD_W / 2 + 10, WORLD_W / 2 - 10);
+    nz = clamp(nz, -WORLD_D / 2 + 10, WORLD_D / 2 - 10);
+    for (const c of colliders) {
+      const dx = nx - c.x, dz = nz - c.z;
+      if (Math.abs(dx) < c.hx + 1.6 && Math.abs(dz) < c.hz + 1.6) {
+        if (Math.abs(dx) / (c.hx + 1.6) > Math.abs(dz) / (c.hz + 1.6)) nx = c.x + Math.sign(dx) * (c.hx + 1.6);
+        else nz = c.z + Math.sign(dz) * (c.hz + 1.6);
+        if (Math.abs(car.speed) > 14) Audio2.thud();
+        car.speed *= 0.35;
+      }
+    }
+    const tr = treeNear(nx, nz, 2.1);
+    if (tr) {
+      const dx = nx - tr[0], dz = nz - tr[1], d = Math.hypot(dx, dz) || 1;
+      nx = tr[0] + dx / d * 2.1; nz = tr[1] + dz / d * 2.1;
+      if (Math.abs(car.speed) > 14) Audio2.thud();
+      car.speed *= 0.4;
+    }
+    car.x = nx; car.z = nz;
+    // lake = stall + tow
+    if (lakeSDF(car.x, car.z) < 0.98 && heightAt(car.x, car.z) < WATER_Y) {
+      const p = nearestRoadPoint(car.x, car.z);
+      car.x = p.x; car.z = p.z; car.speed = 0; car.vx = car.vz = 0;
+      state.cash = Math.max(0, state.cash - 150);
+      toast('You drove into the lake. The tow guy just shook his head. Ope. (-$150)', 'bad');
+      Audio2.bad();
+    }
+    // pose car on terrain
+    const y0 = heightAt(car.x, car.z);
+    const yF = heightAt(car.x + dirx * 2, car.z + dirz * 2);
+    const yB = heightAt(car.x - dirx * 2, car.z - dirz * 2);
+    const rx = Math.sin(car.heading + Math.PI / 2), rz2 = -Math.cos(car.heading + Math.PI / 2);
+    const yL = heightAt(car.x + rx * 1.2, car.z + rz2 * 1.2);
+    const yR = heightAt(car.x - rx * 1.2, car.z - rz2 * 1.2);
+    carMesh.position.set(car.x, Math.max(y0, WATER_Y) + 0.05, car.z);
+    carMesh.rotation.set(Math.atan2(yB - yF, 4), -car.heading + Math.PI, Math.atan2(yR - yL, 2.4), 'YXZ');
+    for (let i = 0; i < 4; i++) {
+      const w = carMesh.userData.wheels[i];
+      w.rotation.x += car.speed * dt / 0.45;
+      if (i < 2) w.rotation.y = steer * 0.45;
+    }
+    player.x = car.x; player.z = car.z; player.heading = car.heading;
+    // exit car
+    if (pressed['e'] && !leadInRange && Math.abs(car.speed) < 4) {
+      player.mode = 'foot';
+      player.x = car.x + rx * 3; player.z = car.z + rz2 * 3;
+      playerMesh.visible = true; Audio2.select();
+    }
+  } else {
+    // ------- on foot -------
+    const camYaw = Math.atan2(camera.position.x - player.x, camera.position.z - player.z);
+    const mx = steer, mz = fwd;
+    const mag = Math.hypot(mx, mz);
+    if (mag > 0.05) {
+      const ang = Math.atan2(mx, mz) + camYaw + Math.PI;
+      const spd = 8.5 * clamp(mag, 0, 1);
+      let nx = player.x + Math.sin(ang) * spd * dt;
+      let nz = player.z + Math.cos(ang) * spd * dt;
+      for (const c of colliders) {
+        const dx = nx - c.x, dz = nz - c.z;
+        if (Math.abs(dx) < c.hx + 0.6 && Math.abs(dz) < c.hz + 0.6) {
+          if (Math.abs(dx) / (c.hx + 0.6) > Math.abs(dz) / (c.hz + 0.6)) nx = c.x + Math.sign(dx) * (c.hx + 0.6);
+          else nz = c.z + Math.sign(dz) * (c.hz + 0.6);
+        }
+      }
+      if (!(lakeSDF(nx, nz) < 0.98 && heightAt(nx, nz) < WATER_Y)) { player.x = nx; player.z = nz; }
+      player.heading = ang;
+      const t = now / 90;
+      playerMesh.userData.limbs.armL.rotation.x = Math.sin(t) * 0.8;
+      playerMesh.userData.limbs.armR.rotation.x = -Math.sin(t) * 0.8;
+    } else {
+      playerMesh.userData.limbs.armL.rotation.x *= 0.8;
+      playerMesh.userData.limbs.armR.rotation.x *= 0.8;
+    }
+    playerMesh.position.set(player.x, heightAt(player.x, player.z), player.z);
+    playerMesh.rotation.y = player.heading + Math.PI;
+    // enter car
+    if (pressed['e'] && !leadInRange && Math.hypot(player.x - car.x, player.z - car.z) < 5) {
+      player.mode = 'car'; playerMesh.visible = false; Audio2.select();
+    }
+  }
+
+  // ------- interactions / prompts -------
+  let promptTxt = '';
+  if (!mg.active) {
+    const fx = player.x, fz = player.z;
+    if (leadInRange) {
+      promptTxt = (isTouch ? 'ACTION' : 'E') + ' — PITCH ' + nearLead.type.label + ' (' + money(nearLead.value) + ')';
+      if (pressed['e']) startMinigame(nearLead);
+    } else if (player.mode === 'foot' && Math.hypot(player.x - car.x, player.z - car.z) < 5) {
+      promptTxt = (isTouch ? 'ACTION' : 'E') + ' — GET IN THE CAR';
+    } else if (player.mode === 'car' && Math.abs(car.speed) < 4) {
+      for (const L of locationObjs) {
+        if (Math.hypot(fx - L.wx, fz - L.wz) < 22) { promptTxt = L.label + ' — activities open in Phase 5+'; break; }
+      }
+    }
+  }
+  promptEl.style.display = promptTxt ? 'block' : 'none';
+  promptEl.textContent = promptTxt;
+
+  // beacons pulse with warmth (dying beacon = cooling lead)
+  for (const l of leads) {
+    l.warmth = Math.max(4, l.warmth - dt * 0.25); // slow ambient cooling
+    const pulse = 0.5 + Math.sin(now / (150 + l.warmth * 8)) * 0.5;
+    l.beacon.material.opacity = 0.18 + pulse * 0.3;
+    l.label.position.y = 12 + Math.sin(now / 300) * 0.6;
+  }
+  rivalTick(now);
+
+  // ------- camera -------
+  const focusX = player.mode === 'car' ? car.x : player.x;
+  const focusZ = player.mode === 'car' ? car.z : player.z;
+  const hd = player.mode === 'car' ? car.heading : player.heading;
+  const back = player.mode === 'car' ? 13 + Math.abs(car.speed) * 0.18 : 8;
+  const up = player.mode === 'car' ? 6 + Math.abs(car.speed) * 0.06 : 4.5;
+  const dx = -Math.sin(hd) * back, dz = Math.cos(hd) * back;
+  const gy = heightAt(focusX + dx, focusZ + dz);
+  const desired = new THREE.Vector3(focusX + dx, Math.max(heightAt(focusX, focusZ) + up, gy + 2.5), focusZ + dz);
+  camPos.lerp(desired, clamp(4.5 * dt, 0, 1));
+  camera.position.copy(camPos);
+  camTarget.set(focusX, heightAt(focusX, focusZ) + 2.2, focusZ);
+  camera.lookAt(camTarget);
+
+  // mute
+  if (pressed['m']) { state.muted = !state.muted; toast(state.muted ? 'Muted.' : 'Sound on.', ''); }
+
+  updateHUD();
+  drawMinimap();
+  renderer.render(scene, camera);
+  for (const k in pressed) pressed[k] = false;
+}
+requestAnimationFrame(loop);
+
+// debug/testing hook (harmless in production; used by the smoke tests)
+window.__rr = { state, leads, player, car, mg, startMinigame };
+</script>
+</body>
+</html>
