@@ -15,42 +15,57 @@ Ground rules for the builder model (include in every session):
 > finishing. Match the existing code style. The original 2D game logic (if provided)
 > is the reference implementation for all simulation formulas.
 
-**Phases 0–1 are already done** (this PR): docs, ported data, vendored Three.js, and a
-playable single-file prototype (world, driving, on-foot, minimap, HUD, day/night, a
-starter "capture leads" loop, touch controls).
+**Phases 0–1 are done**: docs, ported data, vendored Three.js, and a playable
+single-file prototype (world, driving, on-foot, minimap, HUD, day/night, a starter
+"capture leads" loop, touch controls).
+
+**Phases 2–4 are done**: the prototype is split into `src/` modules per §2 below;
+leads now run a real (simplified) pipeline — new → hot → appt → sold — driven by
+`Data.BALANCE` thresholds/decay/ghosting for the chosen difficulty; a phone UI shows
+the live CRM pipeline with warmth bars, tap-to-target GPS objective + compass, energy
+pips, an END DAY button, and localStorage save/resume. See each module's header
+comment for what it owns; `sim/pipeline.js` is the ported "brain."
 
 ---
 
-## Phase 2 — Modularize + input/camera/interaction foundations
-**Goal:** split `index.html` into `src/` per TECH doc §2 with zero behavior change,
-then harden the foundations.
-**Tasks:** extract modules (main, core/input, core/bus, world/*, actors/*, ui/*);
-add gamepad support; camera orbit on foot; interaction system (`Interactable`
-registry: enter radius → prompt → callback) replacing the prototype's ad-hoc checks;
-building AABB colliders.
-**Accept:** behavior identical to prototype; interactables highlight + prompt; car
-can't drive through town buildings; gamepad drives.
-**Prompt:** "Execute Phase 2 of docs/BUILD_PLAN.md. Split the prototype index.html
-into the src/ layout from TECH_ARCHITECTURE.md §2 with no gameplay changes, then add
-the Interactable registry, building colliders, and gamepad input as specified."
+## Phase 2 — Modularize + input/camera/interaction foundations ✅ DONE
+**Delivered:** `index.html` split into `src/core|world|actors|sim|ui` per TECH doc §2
+(19 modules) with behavior preserved and verified via headless smoke tests. Building
+AABB colliders (`world/buildings.js`) block both car and on-foot movement. Vehicle
+physics and on-foot control were extracted into `actors/vehicle.js` / `actors/character.js`
+as pure-ish functions taking state + deps, matching the actors/ layout.
+**Deferred to a later pass:** gamepad input (input.js has the seam — `fwdSteer()` —
+but no gamepad polling yet); a formal `Interactable` registry class (proximity checks
+are still done per-frame in `main.js`'s loop rather than a registered-object system —
+fine at current object counts, worth revisiting once activities add many interactables).
 
-## Phase 3 — Phone, HUD v2, GPS routing
-**Goal:** the phone is the hub; GPS routes on roads.
-**Tasks:** slide-up phone UI (CRM list stub, settings, ability button stub); road
-graph A* + purple route ribbon + minimap route; objective marker system (beacon
-columns per STAGE_COLORS); toasts/notifications queue; energy pips.
-**Accept:** select any map location on the phone → route draws; follow it to arrive;
-notifications slide in; energy displays 3 pips.
+## Phase 3 — Phone, HUD v2, GPS routing — PARTIAL ✅
+**Delivered:** slide-up phone (`ui/phone.js`) with live CRM pipeline (stage badge,
+warmth bar, value, sorted hottest-first), tap-to-target objective, energy pips,
+cash/day header, ability name+desc display, END DAY button. Objective targeting via
+`ui/compass.js` (rotating arrow + live distance) and a highlighted ring on the
+minimap (`ui/minimap.js`) — this is the shipped alternative to full road-based routing.
+**Deferred:** the A* road-graph route + purple route ribbon described in the original
+plan. The compass points as the crow flies, not along roads. Worth adding once GPS
+routing matters for a specific activity (e.g., SHOW HOMES chauffeuring a buyer).
 
-## Phase 4 — Calendar + pipeline simulation (the brain)
-**Goal:** port the 2D `state.js` rules to `sim/pipeline.js` + `sim/calendar.js`.
-**Tasks:** difficulty select on new game; day/sleep cycle applying warmth decay,
-ghosting, passive spawns, pendingDaysBeforeClose, appt drop/steal rolls per
-`Data.BALANCE`; leads bound to generated addresses (seeded); CRM app shows real
-pipeline with warmth bars; commission math on close; season calendar (3×8 days).
-**Accept:** play 5 days doing nothing → leads decay/ghost per STANDARD numbers
-(verify against the table); close a lead via debug command → cash increases by
-correct commission; save/load round-trips (localStorage).
+## Phase 4 — Calendar + pipeline simulation (the brain) — PARTIAL ✅
+**Delivered:** difficulty select (CASUAL/STANDARD/HARD) on the title screen; a real
+day/night → season calendar (`sim/calendar.js`) emitting `day:changed` on rollover;
+`sim/pipeline.js` runs `Data.BALANCE`-driven warmth decay (`decayNew`/`decayWarm`),
+ghosting (`ghostNew3/4`, `ghostWarm3`), appointment drop/steal rolls
+(`apptDropChance`/`apptStealChance`), passive daily spawns, and 2.7% commission on
+close — all verified against the balance table in headless tests (energy spend,
+day rollover, ghosting/decay math, save/resume all pass). Energy pips refill on
+day change; `core/save.js` persists cash/day/difficulty/character and resumes on
+reload with a "Welcome back" note.
+**Simplified from the 2D game on purpose:** the pipeline here is 4 stages
+(new → hot → appt → sold) instead of the full 8 (`attendee`/`active`/`offer`/`pending`
+are folded away) because those extra stages only make sense once the matching
+activities exist (Phase 5–7). `pendingDaysBeforeClose` and `clientNeglectDays` are
+therefore not yet used — reintroduce them when `active`/`offer`/`pending` stages land.
+`maxActivePipeline` is respected (spawn is capped); `attendeeDeadline` awaits the
+OPEN HOUSE activity.
 
 ## Phase 5 — Activities I: CALL, TEXT, FOLLOW UP (+ shared minigame kit)
 **Goal:** first three minigames + the shared overlay/timing/dialogue components.
