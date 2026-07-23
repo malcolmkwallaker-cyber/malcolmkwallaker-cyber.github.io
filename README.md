@@ -4,6 +4,7 @@
 
 - [OpenMontage — Overview & Field Notes](https://malcolmkwallaker-cyber.github.io/openmontage/) — an independent look at the open-source agentic video production system.
 - [Land Reel](https://malcolmkwallaker-cyber.github.io/landreel/) — turn vacant-land photos into a vertical listing reel (Ken Burns motion, a whip transition, and an AI rendering of the finished home), entirely in your browser. No uploads, no accounts.
+- [Realtor Rivals: Lake Country](https://malcolmkwallaker-cyber.github.io/realtorrivals3d/) — an open-world 3D driving game set in Northern Minnesota lake country, based on the Realtor Rivals 2D game. Phase-1 prototype; full design docs and build plan in `realtorrivals3d/docs/`.
 
 ## Vacant-land listing reel pipeline
 
