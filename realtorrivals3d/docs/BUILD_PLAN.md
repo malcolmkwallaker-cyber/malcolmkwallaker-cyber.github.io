@@ -93,12 +93,47 @@ make sense once the `active`/`offer`/`pending` pipeline stages exist (see Phase 
 notes); closing currently happens via the existing in-person "CLOSE DEAL" pitch at
 the `appt` stage.
 
-## Phase 6 — Activities II: OPEN HOUSE, SHOW HOMES, LISTING APPT
-As GDD §6.4–6.7. Attendee leads with followup deadlines; buyer-in-car showing tour
-with 3 stops and walkthrough choices; listing pitch cards; won listings get yard
-signs and become open-house venues.
-**Accept:** take a listing → host an open house there → capture attendees → follow
-up next day converts per balance data.
+## Phase 6 — Activities II: OPEN HOUSE, SHOW HOMES, LISTING APPT ✅ DONE
+**Delivered:** `ui/dialogue.js` generalizes Phase 5's FOLLOW UP dialogue queue into a
+shared runner that handles both shapes — one round per target (FOLLOW UP) and N
+fixed rounds against one target (LISTING APPT/SHOW HOMES) — since
+`Data.FOLLOWUP_ROUNDS` and `D.BATTLE.dialogue`/`D.BATTLE.market` all share the same
+`{msg|prompt, good, bad[]}` shape in the source data.
+- **LISTING APPT** (drive/walk to SELLER CABIN): pitches the warmest un-listed
+  seller lead through `D.BATTLE.dialogue`'s 3 rounds verbatim. Winning (≥2/3 good
+  picks) calls `pipeline.winSellerListing()` — sets `lead.isListing`, jumps it to
+  `appt`, and swaps the beacon/label to a lime "FOR SALE" sign. Losing costs a small
+  warmth penalty via `sellerPitchMiss()`. A surgical change to `pitchLead()` makes
+  this matter: a seller lead crossing `apptThreshold` through ordinary warming
+  (call/text/pitch/follow-up) no longer auto-advances to `appt` — it returns a new
+  `readyForListing` result kind instead, so warmth alone can't skip the listing
+  pitch. Buyers are unaffected.
+- **OPEN HOUSE** (walk/drive up to a won listing's own house — not a separate map
+  location): `ui/minigame.js`'s session queue gained a `customResolve`/`onFinish`
+  hook so it can run rounds against synthetic, non-pipeline targets instead of real
+  leads. 4 "greet the arrival" timing-bar rounds, 2 energy total; each hit calls
+  `pipeline.spawnAttendeeNear()` to capture a fresh pre-qualified buyer lead right
+  next to the listing (respecting `maxActivePipeline`); `lead.openHoused` prevents
+  re-hosting the same listing.
+- **SHOW HOMES** (drive/walk to LAKE HOME): pitches the warmest `appt`-stage buyer
+  lead through `D.BATTLE.market`'s 3 rounds verbatim; the aggregate outcome routes
+  through the existing `pitchLead()` sold/dropped logic, so a win pays commission
+  and removes the lead exactly like the in-person "CLOSE DEAL" pitch does.
+**Accept (verified):** LISTING APPT win sets `isListing`+`appt` with correct
+dialogue content and toasts; the lose path applies a warmth penalty and leaves
+`isListing` false; OPEN HOUSE spends exactly 2 energy, captures leads 1:1 with
+hits, and blocks re-hosting; SHOW HOMES win pays the correct 2.7% commission and
+removes the lead from the pipeline. All three location/lead prompts are correctly
+gated (cabin/lakehome by 22m radius, open house by lead proximity + `isListing`)
+and take priority over enter/exit-car on the same E press.
+**Simplified from the GDD on purpose:** no `attendee`-stage leads or
+`attendeeDeadline` follow-up window — open house captures land straight into the
+pipeline as `new`-stage leads with elevated warmth, skipping the separate
+"sign-in sheet, follow up within N days or lose them" beat described in the GDD.
+No 3-stop driving tour for SHOW HOMES — it's a single dialogue pitch at one
+location rather than physically chauffeuring the buyer to 3 candidate houses (that
+needs GPS routing, which Phase 3 also deferred). Both are reasonable follow-ups
+once road-routing lands.
 
 ## Phase 7 — Activities III: VIDEO/DRONE, NEGOTIATE, INSPECTION, OFFER/CLOSE
 Drone flight rings; negotiation tug-of-war with cards; inspection walkthrough

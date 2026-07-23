@@ -18,6 +18,7 @@ const $ = (id) => document.getElementById(id);
 export const mg = {
   active: false, zoneA: 0, zoneW: 0, lead: null, dir: 1, pos: 0, speed: 0.85,
   queue: [], total: 0, verb: 'PITCH', results: [],
+  customResolve: null, onFinish: null,
 };
 
 let deps = null; // { scene, toast, audio }
@@ -32,7 +33,13 @@ export function tryStartPitch(lead) {
   return startSession([lead], { verb });
 }
 
-// General entry point: opts = { verb, speed, zoneMult, spendEnergy }
+// General entry point: opts = { verb, speed, zoneMult, spendEnergy,
+//   customResolve(target, hit), onFinish(results, total) }
+// Without customResolve, each round routes through sim/pipeline.js's
+// pitchLead() and the normal sold/advance/dropped/miss toasts apply —
+// this is what CALL/TEXT/walk-up pitch use. With customResolve, the
+// caller owns what a "hit" means (used by OPEN HOUSE, where targets
+// are transient arrivals, not real pipeline leads).
 export function startSession(targets, opts = {}) {
   if (!targets.length) return false;
   if (opts.spendEnergy !== false) {
@@ -48,6 +55,8 @@ export function startSession(targets, opts = {}) {
   mg.speed = opts.speed || 0.85;
   mg.zoneMult = opts.zoneMult || 1;
   mg.results = [];
+  mg.customResolve = opts.customResolve || null;
+  mg.onFinish = opts.onFinish || null;
   nextRound();
   return true;
 }
@@ -66,7 +75,8 @@ function nextRound() {
   mg.zoneW = clamp(zw, 0.08, 0.55);
   mg.zoneA = rand(0.08, 0.9 - mg.zoneW);
   const progress = mg.total > 1 ? ' (' + (mg.total - mg.queue.length) + '/' + mg.total + ')' : '';
-  $('mgtitle').textContent = mg.verb + progress + ' · ' + lead.type.label + ' · ' + money(lead.value);
+  const valueTxt = lead.value ? ' · ' + money(lead.value) : '';
+  $('mgtitle').textContent = mg.verb + progress + ' · ' + lead.type.label + valueTxt;
   $('mginfo').textContent = 'Warmth ' + Math.round(lead.warmth) + ' — stop the needle in the green!';
   $('mgzone').style.left = (mg.zoneA * 100) + '%';
   $('mgzone').style.width = (mg.zoneW * 100) + '%';
@@ -77,15 +87,26 @@ function resolveRound() {
   mg.active = false;
   const lead = mg.lead;
   const hit = mg.pos >= mg.zoneA && mg.pos <= mg.zoneA + mg.zoneW;
+  const { toast, audio } = deps;
+
+  if (mg.customResolve) {
+    mg.customResolve(lead, hit);
+    mg.results.push(hit);
+    if (mg.queue.length) { nextRound(); } else { finishSession(); }
+    return;
+  }
+
   const result = pitchLead(deps.scene, lead, hit);
   mg.results.push(result);
-  const { toast, audio } = deps;
   if (result.kind === 'sold') {
     audio.cash();
     toast('SOLD! ' + lead.type.label + ' — ' + money(lead.value) + '  (+' + money(result.commission) + ' commission)', 'cash');
     if (state.sold % 5 === 0) {
       toast('The rival is fuming. "' + (state.picked === 'malcolm' ? 'Nice sale. Adorable, even.' : 'I taught him that.') + '"', 'good');
     }
+  } else if (result.kind === 'readyForListing') {
+    audio.good();
+    toast(lead.type.label + " is ready to list! Head to the SELLER CABIN for a LISTING APPT — warmth alone won't seal it.", 'good');
   } else if (result.kind === 'advance') {
     audio.good();
     const label = lead.stage === 'appt' ? 'APPOINTMENT SET! Ready to close.' : 'Warming up nicely.';
@@ -103,10 +124,13 @@ function resolveRound() {
 function finishSession() {
   mg.active = false;
   $('mg').style.display = 'none';
-  if (mg.total > 1) {
+  if (mg.onFinish) {
+    mg.onFinish(mg.results, mg.total);
+  } else if (mg.total > 1) {
     const wins = mg.results.filter(r => r.kind === 'advance' || r.kind === 'sold').length;
     deps.toast(mg.verb + ' session done: ' + wins + '/' + mg.total + ' went well.', wins > 0 ? 'good' : 'bad');
   }
+  mg.customResolve = null; mg.onFinish = null;
   mg.total = 0; mg.results = [];
 }
 

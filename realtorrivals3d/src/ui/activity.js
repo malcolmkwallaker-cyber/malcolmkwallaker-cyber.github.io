@@ -1,27 +1,30 @@
 // ============================================================
-// ui/activity.js — the office menu (CALL LEADS / TEXT LEADS) and
-// the coffee-shop FOLLOW UP dialogue activity. These are the
-// first three Data.ACTIONS from the 2D game (Phase 5 of
-// docs/BUILD_PLAN.md): remote, location-gated ways to touch
-// leads without having to physically stand at their front door.
+// ui/activity.js — location-gated activities beyond the in-person
+// pitch: the office menu (CALL LEADS / TEXT LEADS, Phase 5), the
+// coffee-shop FOLLOW UP dialogue (Phase 5), and Phase 6's LISTING
+// APPT (Seller Cabin), OPEN HOUSE (at a won listing), and SHOW
+// HOMES (Lake Home).
 //
-// CALL/TEXT route through ui/minigame.js's session queue so they
-// share the exact same timing-bar + pipeline.pitchLead() rules as
-// the in-person pitch. FOLLOW UP gets its own dialogue queue,
-// using Data.FOLLOWUP_ROUNDS verbatim from the 2D game.
+// CALL/TEXT route through ui/minigame.js's session queue. FOLLOW
+// UP, LISTING APPT, and SHOW HOMES all route through
+// ui/dialogue.js's shared multi-round dialogue queue — FOLLOW UP
+// uses Data.FOLLOWUP_ROUNDS (one round per at-risk lead), LISTING
+// APPT and SHOW HOMES use D.BATTLE.dialogue/market (three fixed
+// rounds against one lead) — all three content lists are ported
+// verbatim from the 2D game.
 // ============================================================
 'use strict';
 
 import Data from '../../data/game-data.js';
-import { choice, rand, money } from '../core/rng.js';
+import { choice, money } from '../core/rng.js';
 import { state, leads } from '../core/state.js';
-import { pitchLead, balance } from '../sim/pipeline.js';
+import { pitchLead, balance, winSellerListing, sellerPitchMiss, spawnAttendeeNear } from '../sim/pipeline.js';
 import { startSession } from './minigame.js';
+import { startDialogueQueue, isDialogueActive } from './dialogue.js';
 
 const $ = (id) => document.getElementById(id);
 
 let deps = null; // { toast, audio, scene }
-const dlg = { active: false, queue: [], total: 0, current: null, results: [] };
 let officeMenuOpen = false;
 
 export function initActivities(d) {
@@ -31,14 +34,17 @@ export function initActivities(d) {
   $('officeclose').addEventListener('click', closeOfficeMenu);
 }
 
-export function isActivityBlocking() { return officeMenuOpen || dlg.active; }
+export function isActivityBlocking() { return officeMenuOpen || isDialogueActive(); }
 
-// ---------------- office menu ----------------
+function needEnergy() {
+  if (state.energy > 0) return true;
+  deps.toast("You're running on empty. Head home and sleep (phone → END DAY) to recharge.", 'bad');
+  return false;
+}
+
+// ---------------- office menu: CALL LEADS / TEXT LEADS ----------------
 export function openOfficeMenu() {
-  if (state.energy <= 0) {
-    deps.toast("You're running on empty. Head home and sleep (phone → END DAY) to recharge.", 'bad');
-    return;
-  }
+  if (!needEnergy()) return;
   officeMenuOpen = true;
   $('actionmenu').style.display = 'flex';
 }
@@ -64,13 +70,9 @@ export function startTextSession() {
   startSession(targets, { verb: 'TEXT', speed: 1.15, zoneMult: 0.8 });
 }
 
-// ---------------- follow up (dialogue) ----------------
-// Choice buttons are rebuilt fresh every round since the 3 options differ each time.
+// ---------------- follow up (coffee shop) ----------------
 export function startFollowupSession() {
-  if (state.energy <= 0) {
-    deps.toast("You're running on empty. Head home and sleep (phone → END DAY) to recharge.", 'bad');
-    return;
-  }
+  if (!needEnergy()) return;
   const bal = balance();
   const atRisk = leads
     .filter(l => l.stage !== 'appt' && l.daysIgnored >= 1)
@@ -81,63 +83,143 @@ export function startFollowupSession() {
     return;
   }
   state.energy = Math.max(0, state.energy - 1);
-  dlg.queue = atRisk.slice();
-  dlg.total = atRisk.length;
-  dlg.results = [];
-  nextDialogueRound();
+  const rounds = atRisk.map(lead => ({ target: lead, content: choice(Data.FOLLOWUP_ROUNDS) }));
+  startDialogueQueue(rounds, {
+    header: 'FOLLOW UP',
+    onResolve: (lead, hit) => {
+      const result = pitchLead(deps.scene, lead, hit);
+      const { toast, audio } = deps;
+      if (result.kind === 'sold') {
+        audio.cash();
+        toast('SOLD! ' + lead.type.label + ' — ' + money(lead.value) + '  (+' + money(result.commission) + ' commission)', 'cash');
+      } else if (result.kind === 'readyForListing') {
+        audio.good();
+        toast(lead.type.label + ' is ready to list! Head to the SELLER CABIN for a LISTING APPT.', 'good');
+      } else if (result.kind === 'advance') {
+        audio.good();
+        toast('Good save. ' + lead.type.label + ' warmth: ' + Math.round(lead.warmth), 'good');
+      } else if (result.kind === 'dropped') {
+        audio.bad();
+        toast('Cold feet! ' + lead.type.label + ' backed off the appointment.', 'bad');
+      } else {
+        audio.bad();
+        toast('That answer landed flat. ' + lead.type.label + ' is still on edge.', 'bad');
+      }
+    },
+    onFinish: (results, total) => {
+      if (total <= 1) return;
+      const wins = results.filter(Boolean).length;
+      deps.toast('FOLLOW UP session done: saved ' + wins + '/' + total + ' relationships.', wins > 0 ? 'good' : 'bad');
+    },
+  });
 }
 
-function nextDialogueRound() {
-  if (!dlg.queue.length) { finishDialogue(); return; }
-  const lead = dlg.queue.shift();
-  dlg.current = lead;
-  dlg.active = true;
-  const round = choice(Data.FOLLOWUP_ROUNDS);
-  const options = [{ text: round.good, good: true }, ...round.bad.map(b => ({ text: b, good: false }))];
-  for (let i = options.length - 1; i > 0; i--) { const j = Math.floor(rand(0, i + 1)); [options[i], options[j]] = [options[j], options[i]]; }
-
-  const progress = dlg.total > 1 ? ' (' + (dlg.total - dlg.queue.length) + '/' + dlg.total + ')' : '';
-  $('dlgwho').textContent = 'FOLLOW UP' + progress + ' · ' + lead.type.label;
-  $('dlgmsg').textContent = round.msg;
-  const box = $('dlgchoices');
-  box.innerHTML = '';
-  for (const opt of options) {
-    const btn = document.createElement('button');
-    btn.className = 'dlgbtn';
-    btn.textContent = opt.text;
-    btn.addEventListener('click', () => resolveDialogueRound(opt.good));
-    box.appendChild(btn);
+// ---------------- listing appt (seller cabin) ----------------
+export function startListingSession() {
+  if (!needEnergy()) return;
+  const candidate = leads
+    .filter(l => l.type.seller && !l.isListing)
+    .sort((a, b) => b.warmth - a.warmth)[0];
+  if (!candidate) {
+    deps.toast('No sellers worth pitching right now — check back after a few more leads come in.', '');
+    return;
   }
-  $('dlg').style.display = 'flex';
+  state.energy = Math.max(0, state.energy - 1);
+  const rounds = Data.BATTLE.dialogue.map(content => ({ target: candidate, content }));
+  startDialogueQueue(rounds, {
+    header: 'LISTING APPT',
+    onResolve: (lead, hit) => {
+      deps.audio[hit ? 'good' : 'bad']();
+      deps.toast(hit ? 'Nice answer.' : "That didn't land.", hit ? 'good' : 'bad');
+    },
+    onFinish: (results) => {
+      const hits = results.filter(Boolean).length;
+      if (hits >= Math.ceil(results.length / 2)) {
+        winSellerListing(deps.scene, candidate);
+        deps.audio.great();
+        deps.toast("YOU GOT THE LISTING! " + candidate.type.label + " is officially FOR SALE — host an open house whenever you're ready.", 'good');
+      } else {
+        sellerPitchMiss(candidate);
+        deps.audio.bad();
+        deps.toast(candidate.type.label + ' went with a different agent this time. Warm them back up and try again.', 'bad');
+      }
+    },
+  });
 }
 
-function resolveDialogueRound(hit) {
-  const lead = dlg.current;
-  const result = pitchLead(deps.scene, lead, hit);
-  dlg.results.push(result);
-  const { toast, audio } = deps;
-  if (result.kind === 'advance') {
-    audio.good();
-    toast('Good save. ' + lead.type.label + ' warmth: ' + Math.round(lead.warmth), 'good');
-  } else if (result.kind === 'sold') {
-    audio.cash();
-    toast('SOLD! ' + lead.type.label + ' — ' + money(lead.value) + '  (+' + money(result.commission) + ' commission)', 'cash');
-  } else if (result.kind === 'dropped') {
-    audio.bad();
-    toast('Cold feet! ' + lead.type.label + ' backed off the appointment.', 'bad');
-  } else {
-    audio.bad();
-    toast('That answer landed flat. ' + lead.type.label + ' is still on edge.', 'bad');
+// ---------------- open house (at a won listing) ----------------
+const ATTENDEE_LABELS = [
+  'A YOUNG COUPLE', 'A RETIRED COUPLE', 'A CURIOUS NEIGHBOR', 'A FIRST-TIME BUYER',
+  'A FAMILY OF FIVE', 'SOMEONE "JUST LOOKING"', 'A CASH BUYER', 'AN OUT-OF-TOWNER',
+];
+
+export function startOpenHouseSession(listingLead) {
+  if (state.energy < 2) {
+    deps.toast(state.energy <= 0
+      ? "You're running on empty. Head home and sleep (phone → END DAY) to recharge."
+      : 'Open houses take 2 energy — you only have ' + state.energy + ' left today.', 'bad');
+    return;
   }
-  if (dlg.queue.length) { nextDialogueRound(); } else { finishDialogue(); }
+  if (listingLead.openHoused) {
+    deps.toast('Already hosted an open house here — the buzz has moved on.', '');
+    return;
+  }
+  state.energy = Math.max(0, state.energy - 2);
+  listingLead.openHoused = true;
+  const rounds = 4;
+  const arrivals = [];
+  for (let i = 0; i < rounds; i++) {
+    arrivals.push({ type: { label: choice(ATTENDEE_LABELS), lake: false }, value: 0, warmth: 55, stage: 'new' });
+  }
+  let captured = 0;
+  startSession(arrivals, {
+    verb: 'GREET',
+    spendEnergy: false,
+    customResolve: (arrival, hit) => {
+      const { toast, audio } = deps;
+      if (!hit) { audio.bad(); toast(arrival.type.label + ' wandered off toward the cookies and never came back.', 'bad'); return; }
+      const newLead = spawnAttendeeNear(deps.scene, listingLead);
+      if (!newLead) { audio.bad(); toast('Great chat with ' + arrival.type.label + ', but your pipeline is full — no room to add them.', 'bad'); return; }
+      captured += 1;
+      audio.good();
+      toast(arrival.type.label + ' signed in and is now a hot lead: ' + newLead.type.label + '!', 'good');
+    },
+    onFinish: () => {
+      deps.toast('Open house wrapped. Captured ' + captured + '/' + rounds + ' new leads.', captured > 0 ? 'good' : 'bad');
+    },
+  });
 }
 
-function finishDialogue() {
-  dlg.active = false;
-  $('dlg').style.display = 'none';
-  if (dlg.total > 1) {
-    const wins = dlg.results.filter(r => r.kind === 'advance' || r.kind === 'sold').length;
-    deps.toast('FOLLOW UP session done: saved ' + wins + '/' + dlg.total + ' relationships.', wins > 0 ? 'good' : 'bad');
+// ---------------- show homes (lake home) ----------------
+export function startShowHomesSession() {
+  if (!needEnergy()) return;
+  const candidate = leads
+    .filter(l => !l.type.seller && l.stage === 'appt')
+    .sort((a, b) => b.warmth - a.warmth)[0];
+  if (!candidate) {
+    deps.toast('No buyers ready for a showing right now — warm one up to an appointment first.', '');
+    return;
   }
-  dlg.total = 0; dlg.results = [];
+  state.energy = Math.max(0, state.energy - 1);
+  const rounds = Data.BATTLE.market.map(content => ({ target: candidate, content }));
+  startDialogueQueue(rounds, {
+    header: 'SHOW HOMES',
+    onResolve: (lead, hit) => {
+      deps.audio[hit ? 'good' : 'bad']();
+      deps.toast(hit ? 'They liked that answer.' : 'That one missed the mark.', hit ? 'good' : 'bad');
+    },
+    onFinish: (results) => {
+      const hits = results.filter(Boolean).length;
+      const majorityHit = hits >= Math.ceil(results.length / 2);
+      const result = pitchLead(deps.scene, candidate, majorityHit);
+      const { toast, audio } = deps;
+      if (result.kind === 'sold') {
+        audio.cash();
+        toast('THEY FOUND "THE ONE"! ' + candidate.type.label + ' — ' + money(candidate.value) + '  (+' + money(result.commission) + ' commission)', 'cash');
+      } else {
+        audio.bad();
+        toast('Nothing clicked on this tour. ' + candidate.type.label + ' wants to keep looking.', 'bad');
+      }
+    },
+  });
 }

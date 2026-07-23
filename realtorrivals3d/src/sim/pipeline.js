@@ -20,6 +20,7 @@ import { mapToWorld, roadSegs, LAKES, S, lakeSDF, WORLD_W, WORLD_D, WATER_Y } fr
 import { heightAt } from '../world/heightfield.js';
 
 const STAGE_COLOR = { new: C.gray, hot: C.orange, appt: C.yellow };
+const LISTING_COLOR = C.lime; // "FOR SALE" sign color for a won seller listing
 const COMMISSION_RATE = 0.027; // same rate as the 2D game
 
 export function balance() {
@@ -83,6 +84,34 @@ export function spawnLead(scene) {
     id: nextId(), type, value, x, z, house, beacon, label,
     stage: 'new', warmth: type.warmth, daysIgnored: 0, touchedToday: false,
     bornDay: state.day, warned: false, stealAt: null,
+    isListing: false, openHoused: false,
+  };
+  leads.push(lead);
+  bus.emit('lead:spawned', lead);
+  return lead;
+}
+
+// A buyer captured live at an OPEN HOUSE — spawns right next to the listing
+// instead of on a random road/lakeshore, and starts pre-qualified (warmer).
+export function spawnAttendeeNear(scene, houseLead) {
+  const bal = balance();
+  if (leads.length >= bal.maxActivePipeline) return null;
+  const buyerTypes = Data.LEAD_TYPES.filter(t => !t.seller);
+  const type = choice(buyerTypes);
+  const a = rng() * Math.PI * 2, r = rand(10, 26);
+  const x = houseLead.x + Math.cos(a) * r, z = houseLead.z + Math.sin(a) * r;
+  const value = Math.round(rand(type.value[0], type.value[1]) / 1000) * 1000;
+  const house = buildHouse(scene, x, z, { w: 9, d: 8, h: 4.5 });
+  const beacon = new THREE.Mesh(new THREE.CylinderGeometry(1.2, 1.2, 30, 8, 1, true),
+    new THREE.MeshBasicMaterial({ color: new THREE.Color(STAGE_COLOR.new), transparent: true, opacity: 0.35, side: THREE.DoubleSide }));
+  beacon.position.y = 15; house.add(beacon);
+  const label = makeLabel(choice(Data.LEAD_NAMES), '#ffcd75', 0.9);
+  label.position.y = 12; house.add(label);
+  const lead = {
+    id: nextId(), type, value, x, z, house, beacon, label,
+    stage: 'new', warmth: Math.max(type.warmth, 50), daysIgnored: 0, touchedToday: true,
+    bornDay: state.day, warned: false, stealAt: null,
+    isListing: false, openHoused: false,
   };
   leads.push(lead);
   bus.emit('lead:spawned', lead);
@@ -107,6 +136,28 @@ function characterPitchBonus(lead) {
   if (lead.type.lake && ch.id === 'malcolm') mult *= 1.2;       // lake specialist
   if (ch.negotiateBonus) mult *= (1 + ch.negotiateBonus * 0.6); // the closer closes
   return mult;
+}
+
+// ---------- LISTING APPT: turn a seller lead into a "FOR SALE" listing ----------
+// Called by ui/activity.js after a 3-round D.BATTLE.dialogue pitch session.
+export function winSellerListing(scene, lead) {
+  lead.isListing = true;
+  lead.touchedToday = true;
+  lead.daysIgnored = 0;
+  lead.warmth = Math.max(lead.warmth, balance().apptThreshold + 10);
+  setStage(lead, 'appt');
+  lead.beacon.material.color.set(LISTING_COLOR);
+  scene.remove(lead.label);
+  lead.label = makeLabel('FOR SALE — ' + lead.type.label, '#a7f070', 0.9);
+  lead.label.position.y = 12;
+  lead.house.add(lead.label);
+  bus.emit('lead:listed', lead);
+}
+
+export function sellerPitchMiss(lead) {
+  lead.touchedToday = true;
+  lead.daysIgnored = 0;
+  lead.warmth = Math.max(5, lead.warmth - 10);
 }
 
 // Called by the pitch minigame with hit:boolean. Returns a result the UI
@@ -142,7 +193,12 @@ export function pitchLead(scene, lead, hit) {
     const gain = (18 + rng() * 14) * characterPitchBonus(lead);
     lead.warmth = Math.min(100, lead.warmth + gain);
     if (lead.stage === 'new' && lead.warmth >= bal.warmThreshold) setStage(lead, 'hot');
-    if (lead.stage === 'hot' && lead.warmth >= bal.apptThreshold) setStage(lead, 'appt');
+    if (lead.stage === 'hot' && lead.warmth >= bal.apptThreshold) {
+      // sellers need an actual LISTING APPT to take the listing — warmth
+      // alone just gets them ready for it, it doesn't jump them to 'appt'.
+      if (lead.type.seller && !lead.isListing) return { kind: 'readyForListing', lead };
+      setStage(lead, 'appt');
+    }
     return { kind: 'advance', lead };
   }
   lead.warmth = Math.max(5, lead.warmth - 12);

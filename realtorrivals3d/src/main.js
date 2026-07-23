@@ -30,7 +30,10 @@ import { initToasts, toast } from './ui/toast.js';
 import { updateHUD } from './ui/hud.js';
 import { initMinimap, drawMinimap } from './ui/minimap.js';
 import { initMinigame, mg, tryStartPitch, updateMinigame, confirmMinigame } from './ui/minigame.js';
-import { initActivities, isActivityBlocking, openOfficeMenu, startFollowupSession, startCallSession, startTextSession } from './ui/activity.js';
+import {
+  initActivities, isActivityBlocking, openOfficeMenu, startFollowupSession,
+  startCallSession, startTextSession, startListingSession, startShowHomesSession, startOpenHouseSession,
+} from './ui/activity.js';
 import { buildTitle } from './ui/title.js';
 import { initPhone, togglePhone, isPhoneOpen, renderPhone } from './ui/phone.js';
 import { updateCompass } from './ui/compass.js';
@@ -140,6 +143,7 @@ buildTitle({
 });
 
 // ---------- main loop ----------
+const ACTION_LOC_KEYS = new Set(['office', 'coffee', 'cabin', 'lakehome']);
 let camPos = new THREE.Vector3(0, 40, 60);
 const camTarget = new THREE.Vector3();
 let last = performance.now();
@@ -169,12 +173,12 @@ function loop(now) {
   const phoneBlocking = isPhoneOpen();
   const uiBlocking = phoneBlocking || isActivityBlocking();
 
-  // office/coffee take priority over enter/exit car on the same E press,
-  // same as lead pitching does — otherwise E parked at the office just
-  // pops you out of the car instead of opening the action menu.
+  // office/coffee/cabin/lakehome take priority over enter/exit car on the
+  // same E press, same as lead pitching does — otherwise E parked at a
+  // business just pops you out of the car instead of opening its menu.
   let nearActionLoc = null;
   for (const L of locationObjs) {
-    if ((L.key === 'office' || L.key === 'coffee') && Math.hypot(player.x - L.wx, player.z - L.wz) < 22) {
+    if (ACTION_LOC_KEYS.has(L.key) && Math.hypot(player.x - L.wx, player.z - L.wz) < 22) {
       nearActionLoc = L; break;
     }
   }
@@ -206,7 +210,10 @@ function loop(now) {
   if (!mg.active && !uiBlocking) {
     const fx = player.x, fz = player.z;
     const nearCar = Math.abs(car.speed) < 4;
-    if (leadInRange) {
+    if (leadInRange && nearLead.isListing && !nearLead.openHoused) {
+      promptTxt = (input.isTouch ? 'ACTION' : 'E') + ' — HOST OPEN HOUSE · ' + nearLead.type.label + ' (2 energy)';
+      if (pressed['e'] && !eConsumedByMg) startOpenHouseSession(nearLead);
+    } else if (leadInRange) {
       const verb = nearLead.stage === 'appt' ? 'CLOSE DEAL' : 'PITCH';
       promptTxt = (input.isTouch ? 'ACTION' : 'E') + ' — ' + verb + ' ' + nearLead.type.label + ' (' + nearLead.value.toLocaleString() + ')';
       if (pressed['e'] && !eConsumedByMg) tryStartPitch(nearLead);
@@ -214,9 +221,15 @@ function loop(now) {
       if (nearActionLoc.key === 'office') {
         promptTxt = (input.isTouch ? 'ACTION' : 'E') + ' — ' + nearActionLoc.label + ' (CALL / TEXT LEADS)';
         if (pressed['e'] && !eConsumedByMg) openOfficeMenu();
-      } else {
+      } else if (nearActionLoc.key === 'coffee') {
         promptTxt = (input.isTouch ? 'ACTION' : 'E') + ' — ' + nearActionLoc.label + ' (FOLLOW UP)';
         if (pressed['e'] && !eConsumedByMg) startFollowupSession();
+      } else if (nearActionLoc.key === 'cabin') {
+        promptTxt = (input.isTouch ? 'ACTION' : 'E') + ' — ' + nearActionLoc.label + ' (LISTING APPT)';
+        if (pressed['e'] && !eConsumedByMg) startListingSession();
+      } else {
+        promptTxt = (input.isTouch ? 'ACTION' : 'E') + ' — ' + nearActionLoc.label + ' (SHOW HOMES)';
+        if (pressed['e'] && !eConsumedByMg) startShowHomesSession();
       }
     } else if (player.mode === 'foot' && Math.hypot(player.x - car.x, player.z - car.z) < 5) {
       promptTxt = (input.isTouch ? 'ACTION' : 'E') + ' — GET IN THE CAR';
@@ -268,4 +281,8 @@ function loop(now) {
 requestAnimationFrame(loop);
 
 // debug/testing hook (harmless in production; used by the smoke tests)
-window.__rr = { state, leads, player, car, mg, tryStartPitch, forceEndDay, balance, startCallSession, startTextSession, startFollowupSession };
+window.__rr = {
+  state, leads, player, car, mg, tryStartPitch, forceEndDay, balance,
+  startCallSession, startTextSession, startFollowupSession,
+  startListingSession, startShowHomesSession, startOpenHouseSession,
+};
