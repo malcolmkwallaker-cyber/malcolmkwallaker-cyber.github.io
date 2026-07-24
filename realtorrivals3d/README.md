@@ -20,6 +20,12 @@ LISTING, then walk up to your new "FOR SALE" sign to host an OPEN HOUSE and capt
 fresh buyer leads on the spot. Warm buyers to an appointment and take them on a
 SHOW HOMES tour at the LAKE HOME to close.
 
+Real-time shadows, PBR materials, a gradient sky with reflective water, and bloom
+lighting on desktop — all still procedural (canvas-drawn textures, a cube-camera
+sky reflection), zero downloaded images or models. See
+`docs/TECH_ARCHITECTURE.md` §9 for what changed and why SSAO specifically was
+left out.
+
 **Controls:** WASD drive/walk · E action (pitch / close / office / follow up /
 listing appt / open house / show homes / enter / exit car) · P phone/CRM ·
 SPACE brake · M mute. On phones: left virtual stick + ACTION button.
@@ -30,11 +36,12 @@ SPACE brake · M mute. On phones: left virtual stick + ACTION button.
 |---|---|
 | `index.html` | Entry point — import map, canvas, all DOM UI markup, boots `src/main.js` |
 | `src/core/` | RNG, event bus, save/load, input, audio |
-| `src/world/` | Map layout, heightfield, terrain/water/road meshes, towns/buildings, forest |
+| `src/world/` | Map layout, heightfield, terrain/water/road meshes, towns/buildings, forest, sky dome + env probe (`sky.js`), procedural canvas textures (`textures.js`) |
 | `src/actors/` | Character (on-foot) and vehicle (arcade car) meshes + controllers |
-| `src/sim/` | `calendar.js` (day/night/season) and `pipeline.js` (the ported 2D "brain": leads, warmth, stages, ghosting, listings, commission) |
+| `src/sim/` | `calendar.js` (day/night/season, sun direction) and `pipeline.js` (the ported 2D "brain": leads, warmth, stages, ghosting, listings, commission) |
 | `src/ui/` | HUD, minimap, phone/CRM, compass, toasts, title/difficulty select, timing-bar minigame queue (with a generic non-lead mode for OPEN HOUSE), shared multi-round dialogue queue, office menu |
 | `lib/three.module.min.js` | Vendored Three.js r160 (no CDN, no build step) |
+| `lib/three-addons/` | Vendored `three/examples/jsm` postprocessing modules (EffectComposer, bloom) used for the graphics pass |
 | `data/game-data.js` | The 2D game's entire data set, ported verbatim — characters, balance tables, 48 lead types, 25 upgrades, 8 bosses, weather, events, achievements. Single source of truth for the 3D build. |
 | `docs/GAME_DESIGN.md` | Full open-world game design document |
 | `docs/TECH_ARCHITECTURE.md` | Engine/stack decisions, world-gen math, performance budgets |

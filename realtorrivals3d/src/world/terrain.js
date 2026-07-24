@@ -1,6 +1,10 @@
 // ============================================================
 // world/terrain.js — the one-draw-call ground mesh, water
-// planes, and draped road ribbons.
+// planes, and draped road ribbons. PBR materials + shadows +
+// procedural (canvas-generated) detail textures — see
+// world/textures.js. Vertex colors still drive the big biome
+// blend (grass/sand/rock/road); the textures add fine detail
+// on top so surfaces don't read as flat color fills.
 // ============================================================
 'use strict';
 
@@ -8,6 +12,9 @@ import * as THREE from 'three';
 import { clamp } from '../core/rng.js';
 import { WORLD_W, WORLD_D, WATER_Y, LAKES, mapToWorld, S, roadSegs, roadDist, lakeSDF } from './geo.js';
 import { HX, HZ, heightAt, vnoise } from './heightfield.js';
+import { makeGroundTexture, makeAsphaltTexture } from './textures.js';
+
+const waterMaterials = [];
 
 export function buildTerrain(scene) {
   const geo = new THREE.PlaneGeometry(WORLD_W, WORLD_D, HX - 1, HZ - 1);
@@ -30,8 +37,11 @@ export function buildTerrain(scene) {
   }
   geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
   geo.computeVertexNormals();
-  const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true }));
+  const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
+    vertexColors: true, map: makeGroundTexture(), roughness: 1, metalness: 0,
+  }));
   mesh.matrixAutoUpdate = false;
+  mesh.receiveShadow = true;
   scene.add(mesh);
 }
 
@@ -40,17 +50,28 @@ export function buildWater(scene) {
     const c = mapToWorld(l.cx, l.cy);
     const geo = new THREE.CircleGeometry(1, 48);
     geo.rotateX(-Math.PI / 2);
-    const m = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({
-      color: 0x3f8fd4, transparent: true, opacity: 0.88 }));
+    const mat = new THREE.MeshStandardMaterial({
+      color: 0x2f6fa8, transparent: true, opacity: 0.9,
+      roughness: 0.1, metalness: 0.05, envMapIntensity: 1.3,
+    });
+    waterMaterials.push(mat);
+    const m = new THREE.Mesh(geo, mat);
     m.scale.set(l.rx * S, 1, l.ry * S);
     m.position.set(c.x, WATER_Y, c.z);
+    m.receiveShadow = true;
     m.matrixAutoUpdate = false; m.updateMatrix();
     scene.add(m);
   }
 }
 
+// Called once the procedural env probe (world/sky.js) exists — gives
+// every lake a real reflection instead of a flat blue disc.
+export function setWaterEnvMap(envTexture) {
+  for (const mat of waterMaterials) mat.envMap = envTexture;
+}
+
 export function buildRoadRibbons(scene) {
-  const verts = [], HW = 5.2;
+  const verts = [], uvs = [], HW = 5.2;
   for (const s of roadSegs) {
     const dx = s.bx - s.ax, dz = s.bz - s.az, L = Math.hypot(dx, dz);
     if (L < 1) continue;
@@ -61,17 +82,24 @@ export function buildRoadRibbons(scene) {
       const x0 = s.ax + dx * t0, z0 = s.az + dz * t0;
       const x1 = s.ax + dx * t1, z1 = s.az + dz * t1;
       const y0 = heightAt(x0, z0) + 0.12, y1 = heightAt(x1, z1) + 0.12;
+      const v0 = (t0 * L) / 4, v1 = (t1 * L) / 4;
       const q = [
         [x0 + nx * HW, y0, z0 + nz * HW], [x0 - nx * HW, y0, z0 - nz * HW], [x1 - nx * HW, y1, z1 - nz * HW],
         [x0 + nx * HW, y0, z0 + nz * HW], [x1 - nx * HW, y1, z1 - nz * HW], [x1 + nx * HW, y1, z1 + nz * HW],
       ];
+      const quv = [[0, v0], [1, v0], [1, v1], [0, v0], [1, v1], [0, v1]];
       for (const v of q) verts.push(...v);
+      for (const uv of quv) uvs.push(...uv);
     }
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(verts), 3));
+  geo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(uvs), 2));
   geo.computeVertexNormals();
-  const mesh = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ color: 0x525258 }));
+  const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({
+    map: makeAsphaltTexture(), roughness: 0.85, metalness: 0.05,
+  }));
   mesh.matrixAutoUpdate = false;
+  mesh.receiveShadow = true;
   scene.add(mesh);
 }

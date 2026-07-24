@@ -14,24 +14,43 @@ import { lerp, clamp } from '../core/rng.js';
 
 const CAR_ACCEL = 26, CAR_MAX = 46, CAR_REV = -10, CAR_DRAG = 0.35, CAR_BRAKE = 55;
 
+const rimGeo = new THREE.CylinderGeometry(0.22, 0.22, 0.42, 8);
+rimGeo.rotateZ(Math.PI / 2);
+const rimMat = new THREE.MeshStandardMaterial({ color: 0xd8dde2, roughness: 0.35, metalness: 0.85 });
+
 export function buildCar(colorHex) {
   const g = new THREE.Group();
-  const body = box(2.1, 0.8, 4.4, colorHex); body.position.y = 0.85; g.add(body);
-  const cab = box(1.8, 0.7, 2.2, 0x9fd7ef); cab.position.set(0, 1.55, -0.2); g.add(cab);
-  const wheels = [];
-  const wg = new THREE.CylinderGeometry(0.45, 0.45, 0.4, 10);
-  wg.rotateZ(Math.PI / 2);
-  for (const [wx, wz] of [[-1.05, 1.5], [1.05, 1.5], [-1.05, -1.6], [1.05, -1.6]]) {
-    const w = new THREE.Mesh(wg, new THREE.MeshLambertMaterial({ color: 0x1a1c2c }));
-    w.position.set(wx, 0.45, wz); g.add(w); wheels.push(w);
+  const body = box(2.1, 0.8, 4.4, colorHex, { roughness: 0.35, metalness: 0.45 });
+  body.position.y = 0.85; g.add(body);
+  const cab = box(1.8, 0.7, 2.2, 0x9fd7ef, { roughness: 0.08, metalness: 0.3 });
+  cab.position.set(0, 1.55, -0.2); g.add(cab);
+  // side mirrors — small but they break up the silhouette a lot
+  for (const side of [-1, 1]) {
+    const mirror = box(0.15, 0.22, 0.35, colorHex, { roughness: 0.4, metalness: 0.4 });
+    mirror.position.set(side * 1.12, 1.35, 0.6); g.add(mirror);
   }
-  const hl = box(0.3, 0.2, 0.1, 0xfff6c8); hl.position.set(-0.6, 0.9, 2.25); g.add(hl);
+  const wheels = [];
+  const wg = new THREE.CylinderGeometry(0.45, 0.45, 0.4, 12);
+  wg.rotateZ(Math.PI / 2);
+  const tireMat = new THREE.MeshStandardMaterial({ color: 0x15161c, roughness: 0.95, metalness: 0.05 });
+  for (const [wx, wz, isFront] of [[-1.05, 1.5, true], [1.05, 1.5, true], [-1.05, -1.6, false], [1.05, -1.6, false]]) {
+    const w = new THREE.Mesh(wg, tireMat);
+    w.position.set(wx, 0.45, wz); w.castShadow = true; w.receiveShadow = true;
+    g.add(w);
+    const rim = new THREE.Mesh(rimGeo, rimMat);
+    rim.position.copy(w.position); rim.castShadow = true;
+    g.add(rim);
+    wheels.push({ wheel: w, rim, isFront });
+  }
+  const hl = box(0.3, 0.2, 0.1, 0xfff6c8, { emissive: 0xfff2b0, emissiveIntensity: 0.6, roughness: 0.2 });
+  hl.position.set(-0.6, 0.9, 2.25); g.add(hl);
   const hr = hl.clone(); hr.position.x = 0.6; g.add(hr);
-  const tl = box(0.3, 0.2, 0.1, 0xb13e53); tl.position.set(-0.6, 0.9, -2.25); g.add(tl);
+  const tl = box(0.3, 0.2, 0.1, 0xb13e53, { emissive: 0xb13e53, emissiveIntensity: 0.5, roughness: 0.2 });
+  tl.position.set(-0.6, 0.9, -2.25); g.add(tl);
   const tr = tl.clone(); tr.position.x = 0.6; g.add(tr);
   g.userData.wheels = wheels;
   const shadow = new THREE.Mesh(new THREE.CircleGeometry(2.6, 16),
-    new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.25 }));
+    new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.2 }));
   shadow.rotation.x = -Math.PI / 2; shadow.position.y = 0.03; g.add(shadow);
   return g;
 }
@@ -85,10 +104,10 @@ export function updateVehicle(car, carMesh, fwd, steer, braking, dt, colliders, 
   const yR = heightAt(car.x - rx * 1.2, car.z - rz2 * 1.2);
   carMesh.position.set(car.x, Math.max(y0, WATER_Y) + 0.05, car.z);
   carMesh.rotation.set(Math.atan2(yB - yF, 4), -car.heading + Math.PI, Math.atan2(yR - yL, 2.4), 'YXZ');
-  for (let i = 0; i < 4; i++) {
-    const w = carMesh.userData.wheels[i];
-    w.rotation.x += car.speed * dt / 0.45;
-    if (i < 2) w.rotation.y = steer * 0.45;
+  for (const { wheel, rim, isFront } of carMesh.userData.wheels) {
+    wheel.rotation.x += car.speed * dt / 0.45;
+    rim.rotation.x = wheel.rotation.x;
+    if (isFront) { wheel.rotation.y = steer * 0.45; rim.rotation.y = steer * 0.45; }
   }
   return { tollMsg, rightX: rx, rightZ: rz2 };
 }

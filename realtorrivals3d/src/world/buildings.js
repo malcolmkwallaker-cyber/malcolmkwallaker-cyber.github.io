@@ -1,7 +1,8 @@
 // ============================================================
 // world/buildings.js — box/label helpers, procedural houses,
 // town placement, key-location landmarks, and the collider
-// list every actor collides against.
+// list every actor collides against. PBR materials + shadows +
+// procedural siding/roof/window textures (world/textures.js).
 // ============================================================
 'use strict';
 
@@ -9,6 +10,7 @@ import * as THREE from 'three';
 import { rand, rng, choice } from '../core/rng.js';
 import { TOWNS, LOCATIONS, mapToWorld, lakeSDF, roadDist } from './geo.js';
 import { heightAt } from './heightfield.js';
+import { makeRoofTexture, makeSidingTexture, makeWindowTexture } from './textures.js';
 
 export const colliders = []; // {x,z,hx,hz}
 export const locationObjs = [];
@@ -31,19 +33,50 @@ export function makeLabel(text, color = '#f4f4f4', scale = 1) {
   return sp;
 }
 
-export function box(w, h, d, color) {
-  return new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshLambertMaterial({ color }));
+export function box(w, h, d, color, opts = {}) {
+  const matParams = {
+    color, roughness: opts.roughness ?? 0.85, metalness: opts.metalness ?? 0.05,
+    emissive: opts.emissive ?? 0x000000, emissiveIntensity: opts.emissiveIntensity ?? 1,
+    transparent: !!opts.opacity, opacity: opts.opacity ?? 1,
+  };
+  if (opts.map) matParams.map = opts.map;
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshStandardMaterial(matParams));
+  mesh.castShadow = true; mesh.receiveShadow = true;
+  return mesh;
+}
+
+// Recursively flags every Mesh in a subtree as a shadow caster+receiver —
+// used for hand-built compound objects (landmarks, water towers) where
+// every part should participate in the shadow pass.
+function enableShadows(root) {
+  root.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
 }
 
 export function buildHouse(scene, x, z, opts = {}) {
   const g = new THREE.Group();
   const w = opts.w || rand(8, 12), d = opts.d || rand(7, 10), h = opts.h || rand(4, 6);
   const bodyCol = opts.color ?? choice([0xd8cfc0, 0xb8c4cf, 0xc9a886, 0x9fb28f, 0xd4b8b0]);
-  const body = box(w, h, d, bodyCol); body.position.y = h / 2; g.add(body);
+  const body = box(w, h, d, bodyCol, { map: makeSidingTexture(bodyCol), roughness: 0.8 });
+  body.position.y = h / 2; g.add(body);
+  const roofColor = opts.roof ?? 0x7a4a3a;
   const roof = new THREE.Mesh(new THREE.CylinderGeometry(0, w * 0.72, h * 0.7, 4),
-    new THREE.MeshLambertMaterial({ color: opts.roof ?? 0x7a4a3a }));
+    new THREE.MeshStandardMaterial({ map: makeRoofTexture(roofColor), roughness: 0.75, metalness: 0.03 }));
   roof.rotation.y = Math.PI / 4; roof.position.y = h + h * 0.35;
-  roof.scale.z = d / w; g.add(roof);
+  roof.scale.z = d / w; roof.castShadow = true; roof.receiveShadow = true; g.add(roof);
+
+  // a couple of lit windows on the front face — cheap but does a lot
+  // for making a box read as "a house" instead of a shed.
+  const winMat = new THREE.MeshStandardMaterial({
+    map: makeWindowTexture(), roughness: 0.25, metalness: 0.1,
+    emissive: 0xffe9a8, emissiveIntensity: 0.35,
+  });
+  const winSize = Math.min(1.6, h * 0.32);
+  for (const wx of [-w * 0.22, w * 0.22]) {
+    const win = new THREE.Mesh(new THREE.PlaneGeometry(winSize, winSize), winMat);
+    win.position.set(wx, h * 0.55, d / 2 + 0.03);
+    g.add(win);
+  }
+
   const y = heightAt(x, z);
   g.position.set(x, y, z);
   scene.add(g);
@@ -69,10 +102,11 @@ export function buildTowns(scene) {
     if (lakeSDF(wx, wz) < 1.2) { wx = c.x - 40; wz = c.z + 40; }
     const ty = heightAt(wx, wz);
     const tower = new THREE.Group();
-    const legs = box(1.6, 18, 1.6, 0x8899a6); legs.position.y = 9; tower.add(legs);
+    const legs = box(1.6, 18, 1.6, 0x8899a6, { roughness: 0.4, metalness: 0.6 }); legs.position.y = 9; tower.add(legs);
     const tank = new THREE.Mesh(new THREE.SphereGeometry(6, 12, 10),
-      new THREE.MeshLambertMaterial({ color: 0xa8c4d4 }));
+      new THREE.MeshStandardMaterial({ color: 0xa8c4d4, roughness: 0.35, metalness: 0.55 }));
     tank.position.y = 20; tower.add(tank);
+    enableShadows(tower);
     tower.position.set(wx, ty, wz); scene.add(tower);
     const lab = makeLabel(t.name, '#ffcd75', 1.5); lab.position.set(wx, ty + 31, wz); scene.add(lab);
   }
@@ -95,16 +129,18 @@ export function buildLandmarks(scene) {
   const paul = new THREE.Group();
   const legs2 = box(3.4, 6, 2.2, 0x29366f); legs2.position.y = 3; paul.add(legs2);
   const shirt = box(4.2, 5, 2.6, 0xb13e53); shirt.position.y = 8; paul.add(shirt);
-  const head = new THREE.Mesh(new THREE.SphereGeometry(1.5, 10, 8), new THREE.MeshLambertMaterial({ color: 0xe8b890 }));
+  const head = new THREE.Mesh(new THREE.SphereGeometry(1.5, 10, 8), new THREE.MeshStandardMaterial({ color: 0xe8b890, roughness: 0.7 }));
   head.position.y = 11.6; paul.add(head);
   const beard = box(2.2, 1.6, 1, 0x5a3a22); beard.position.set(0, 10.8, 0.9); paul.add(beard);
   const axe = box(0.6, 9, 0.6, 0x7a4a3a); axe.position.set(3, 5.5, 0); paul.add(axe);
+  enableShadows(paul);
   paul.position.set(c.x, y, c.z); scene.add(paul);
   const babe = new THREE.Group();
   const bod = box(7, 4, 3.4, 0x41a6f6); bod.position.y = 3.4; babe.add(bod);
   const bhead = box(2.6, 2.4, 2.4, 0x41a6f6); bhead.position.set(4.4, 4.6, 0); babe.add(bhead);
-  const horn = box(3.8, 0.5, 0.5, 0xf4f4f4); horn.position.set(4.4, 6, 0); babe.add(horn);
+  const horn = box(3.8, 0.5, 0.5, 0xf4f4f4, { roughness: 0.3 }); horn.position.set(4.4, 6, 0); babe.add(horn);
   const blegs = box(6, 2.8, 2.6, 0x3b5dc9); blegs.position.y = 1.2; babe.add(blegs);
+  enableShadows(babe);
   babe.position.set(c.x + 10, y, c.z + 3); scene.add(babe);
   const lab = makeLabel('PAUL BUNYAN & BABE', '#a7f070', 1);
   lab.position.set(c.x + 4, y + 16, c.z); scene.add(lab);

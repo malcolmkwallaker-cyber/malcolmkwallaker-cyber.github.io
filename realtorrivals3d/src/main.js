@@ -2,10 +2,22 @@
 // main.js — boot, scene setup, and the frame loop. Ties every
 // module together; contains no game rules of its own beyond
 // wiring (car/on-foot switching, camera, per-frame UI refresh).
+//
+// Rendering: PBR materials + real-time shadows + a procedural
+// sky/env-probe + (desktop only) bloom post-processing. See
+// docs/TECH_ARCHITECTURE.md "Rendering upgrade" for the full
+// writeup, the desktop/mobile quality split, and why SSAO
+// specifically is left out (crashes under software-rendered
+// WebGL in testing — not worth the risk without real-hardware
+// verification; everything else here tested clean).
 // ============================================================
 'use strict';
 
 import * as THREE from 'three';
+import { EffectComposer } from '../lib/three-addons/postprocessing/EffectComposer.js';
+import { RenderPass } from '../lib/three-addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from '../lib/three-addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from '../lib/three-addons/postprocessing/OutputPass.js';
 import Data from '../data/game-data.js';
 import { clamp, money } from './core/rng.js';
 import { bus } from './core/bus.js';
@@ -16,9 +28,10 @@ import { state, leads } from './core/state.js';
 
 import { mapToWorld } from './world/geo.js';
 import { heightAt } from './world/heightfield.js';
-import { buildTerrain, buildWater, buildRoadRibbons } from './world/terrain.js';
+import { buildTerrain, buildWater, buildRoadRibbons, setWaterEnvMap } from './world/terrain.js';
 import { buildTowns, buildLocations, buildLandmarks, colliders } from './world/buildings.js';
 import { buildForest } from './world/forest.js';
+import { buildSky, buildEnvProbe } from './world/sky.js';
 
 import { buildCharacter, updateOnFoot } from './actors/character.js';
 import { buildCar, updateVehicle } from './actors/vehicle.js';
@@ -42,22 +55,76 @@ const $ = (id) => document.getElementById(id);
 
 // ---------- three.js scene ----------
 const canvas = $('game');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.6));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+
+// ---------- quality tier ----------
+// Coarse-pointer (touch) devices AND software-rendered WebGL contexts
+// both get the light tier. The second case matters beyond mobile:
+// Chrome silently falls back to SwiftShader (a CPU software rasterizer)
+// on real desktops when GPU drivers are blocklisted or hardware accel
+// is off, and asking a software rasterizer to shadow-map 14k tree
+// instances + a full-res cube env probe is what actually crashed this
+// build in testing — not any single feature being unsupported. Detect
+// it and drop to the same safe tier touch devices use.
+function isSoftwareRenderer(gl) {
+  try {
+    const info = gl.getExtension('WEBGL_debug_renderer_info');
+    const str = info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER);
+    return /swiftshader|software|llvmpipe|softpipe|basic render/i.test(str || '');
+  } catch (e) { return false; }
+}
+const isTouch = matchMedia('(pointer: coarse)').matches;
+const isLowPower = isTouch || isSoftwareRenderer(renderer.getContext());
+const QUALITY = isLowPower ? 'low' : 'high';
+const usePost = !isLowPower;
+const shadowMapSize = isLowPower ? 1024 : 2048;
+
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(62, 1, 0.5, 1400);
-scene.fog = new THREE.Fog(0x9fc9e8, 250, 950);
+scene.fog = new THREE.Fog(0x9fc9e8, 260, 950);
 
-const hemi = new THREE.HemisphereLight(0xbfe3ff, 0x3a5a3a, 0.9);
+const sky = buildSky(scene);
+
+const hemi = new THREE.HemisphereLight(0xbfe3ff, 0x3a5a3a, 0.55);
 scene.add(hemi);
 const sun = new THREE.DirectionalLight(0xfff2d8, 1.4);
-sun.position.set(300, 400, 150);
-scene.add(sun);
+sun.castShadow = true;
+sun.shadow.mapSize.set(shadowMapSize, shadowMapSize);
+sun.shadow.camera.near = 10;
+sun.shadow.camera.far = 340;
+sun.shadow.camera.left = -75; sun.shadow.camera.right = 75;
+sun.shadow.camera.top = 75; sun.shadow.camera.bottom = -75;
+sun.shadow.camera.updateProjectionMatrix();
+sun.shadow.bias = -0.0015;
+sun.shadow.normalBias = 0.03;
+scene.add(sun, sun.target);
+
+// ---------- post-processing ----------
+// SSAO (contact-shadow ambient occlusion) was tried here and pulled:
+// it needs a WebGL2 depth-texture render target, and under a software-
+// rendered WebGL context it triggered a hard GPU-process crash that
+// wasn't catchable via try/catch — not a risk worth taking without a
+// real-GPU device to verify against. Bloom alone needs no depth
+// texture and tested clean, so it stays.
+let composer = null;
+if (usePost) {
+  composer = new EffectComposer(renderer);
+  composer.addPass(new RenderPass(scene, camera));
+  const bloom = new UnrealBloomPass(new THREE.Vector2(window.innerWidth, window.innerHeight), 0.35, 0.5, 0.86);
+  composer.addPass(bloom);
+  composer.addPass(new OutputPass());
+}
 
 function onResize() {
   renderer.setSize(window.innerWidth, window.innerHeight, false);
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
+  if (composer) composer.setSize(window.innerWidth, window.innerHeight);
 }
 window.addEventListener('resize', onResize); onResize();
 
@@ -68,7 +135,15 @@ buildRoadRibbons(scene);
 buildTowns(scene);
 const locationObjs = buildLocations(scene);
 buildLandmarks(scene);
-buildForest(scene);
+buildForest(scene, QUALITY);
+
+// procedural environment probe: gives every PBR material believable
+// ambient specular and gives the lakes an actual reflection, with
+// zero downloaded HDRIs — it's a cube camera pointed at our own
+// hand-built sky + world, refreshed a few times a second.
+const envProbe = buildEnvProbe(renderer, scene, isLowPower ? 64 : 128);
+scene.environment = envProbe.texture;
+setWaterEnvMap(envProbe.texture);
 
 // ---------- audio / input ----------
 const audio = createAudio(() => state.muted);
@@ -95,7 +170,13 @@ const car = { x: 0, z: 0, heading: 0, speed: 0, vx: 0, vz: 0 };
 }
 
 // ---------- calendar / day rollover ----------
-const calendar = createCalendar(scene, sun, hemi);
+const calendar = createCalendar(scene, sky);
+calendar.tick(0); // prime the sky dome's colors before the first frame renders
+sun.position.set(car.x + calendar.sunDir.x * 260, 260, car.z + calendar.sunDir.z * 260);
+sun.target.position.set(car.x, 0, car.z);
+sun.target.updateMatrixWorld();
+sun.intensity = 0.15 + calendar.dayness * 1.25;
+sky.follow(car.x, car.z);
 bus.on('day:changed', ({ day, month }) => {
   const toasts = dailyTick(scene);
   toast('A new day in ' + Data.SEASON.months[month] + ' (day ' + day + '). Fresh leads are out there.', 'good');
@@ -205,6 +286,24 @@ function loop(now) {
     }
   }
 
+  // ------- focus point (drives shadow-sun, env probe, camera, compass) -------
+  const focusX = player.mode === 'car' ? car.x : player.x;
+  const focusZ = player.mode === 'car' ? car.z : player.z;
+  const hd = player.mode === 'car' ? car.heading : player.heading;
+  const focusY = heightAt(focusX, focusZ);
+
+  // the shadow camera's frustum is fixed in the light's local space, so
+  // moving sun+target together keeps it centered on the player without
+  // recomputing the frustum every frame — the world is far bigger than
+  // any shadow map could cover, so the sun has to follow, not sit still.
+  sun.position.set(focusX + calendar.sunDir.x * 260, focusY + Math.max(60, calendar.sunDir.y * 260), focusZ + calendar.sunDir.z * 260);
+  sun.target.position.set(focusX, focusY, focusZ);
+  sun.target.updateMatrixWorld();
+  sun.intensity = 0.15 + calendar.dayness * 1.25;
+  hemi.intensity = 0.25 + calendar.dayness * 0.55;
+  envProbe.tick(focusX, focusY, focusZ);
+  sky.follow(focusX, focusZ);
+
   // ------- interactions / prompts -------
   let promptTxt = '';
   if (!mg.active && !uiBlocking) {
@@ -256,17 +355,14 @@ function loop(now) {
   }
 
   // ------- camera -------
-  const focusX = player.mode === 'car' ? car.x : player.x;
-  const focusZ = player.mode === 'car' ? car.z : player.z;
-  const hd = player.mode === 'car' ? car.heading : player.heading;
   const back = player.mode === 'car' ? 13 + Math.abs(car.speed) * 0.18 : 8;
   const up = player.mode === 'car' ? 6 + Math.abs(car.speed) * 0.06 : 4.5;
   const dx = -Math.sin(hd) * back, dz = Math.cos(hd) * back;
   const gy = heightAt(focusX + dx, focusZ + dz);
-  const desired = new THREE.Vector3(focusX + dx, Math.max(heightAt(focusX, focusZ) + up, gy + 2.5), focusZ + dz);
+  const desired = new THREE.Vector3(focusX + dx, Math.max(focusY + up, gy + 2.5), focusZ + dz);
   camPos.lerp(desired, clamp(4.5 * dt, 0, 1));
   camera.position.copy(camPos);
-  camTarget.set(focusX, heightAt(focusX, focusZ) + 2.2, focusZ);
+  camTarget.set(focusX, focusY + 2.2, focusZ);
   camera.lookAt(camTarget);
 
   updateCompass(focusX, focusZ, hd);
@@ -275,7 +371,7 @@ function loop(now) {
 
   updateHUD();
   drawMinimap(player, car, now);
-  renderer.render(scene, camera);
+  if (composer) composer.render(); else renderer.render(scene, camera);
   input.endFrame();
 }
 requestAnimationFrame(loop);

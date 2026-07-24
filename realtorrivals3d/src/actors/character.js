@@ -1,5 +1,7 @@
 // ============================================================
 // actors/character.js — the on-foot character mesh + controller.
+// Capsule torso/limbs read far less "boxy robot" than plain cubes
+// for barely any extra triangles; PBR materials + shadows.
 // ============================================================
 'use strict';
 
@@ -8,15 +10,25 @@ import { box } from '../world/buildings.js';
 import { heightAt } from '../world/heightfield.js';
 import { lakeSDF, WATER_Y } from '../world/geo.js';
 
+function capsule(radius, length, color, opts = {}) {
+  const mesh = new THREE.Mesh(new THREE.CapsuleGeometry(radius, length, 4, 8), new THREE.MeshStandardMaterial({
+    color, roughness: opts.roughness ?? 0.75, metalness: opts.metalness ?? 0.02,
+  }));
+  mesh.castShadow = true; mesh.receiveShadow = true;
+  return mesh;
+}
+
 export function buildCharacter(colorHex, accentHex) {
   const g = new THREE.Group();
-  const legs = box(0.65, 0.85, 0.4, 0x333c57); legs.position.y = 0.42; g.add(legs);
-  const torso = box(0.8, 0.85, 0.5, colorHex); torso.position.y = 1.25; g.add(torso);
-  const armL = box(0.22, 0.8, 0.28, colorHex); armL.position.set(-0.55, 1.25, 0); g.add(armL);
-  const armR = armL.clone(); armR.position.x = 0.55; g.add(armR);
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.34, 10, 8), new THREE.MeshLambertMaterial({ color: 0xe8b890 }));
+  const legs = box(0.62, 0.8, 0.38, 0x333c57, { roughness: 0.8 }); legs.position.y = 0.4; g.add(legs);
+  const torso = capsule(0.36, 0.5, colorHex); torso.position.y = 1.28; g.add(torso);
+  const armL = capsule(0.13, 0.55, colorHex); armL.position.set(-0.52, 1.28, 0); g.add(armL);
+  const armR = armL.clone(); armR.position.x = 0.52; g.add(armR);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.34, 14, 10),
+    new THREE.MeshStandardMaterial({ color: 0xe8b890, roughness: 0.6 }));
+  head.castShadow = true; head.receiveShadow = true;
   head.position.y = 2.0; g.add(head);
-  const cap = box(0.55, 0.18, 0.55, accentHex); cap.position.y = 2.22; g.add(cap);
+  const cap = box(0.55, 0.18, 0.55, accentHex, { roughness: 0.7 }); cap.position.y = 2.22; g.add(cap);
   g.userData.limbs = { armL, armR, legs };
   return g;
 }

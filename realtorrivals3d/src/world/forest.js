@@ -8,16 +8,22 @@ import * as THREE from 'three';
 import { rand, rng } from '../core/rng.js';
 import { WORLD_W, WORLD_D, WATER_Y, TOWNS, mapToWorld, roadDist, lakeSDF } from './geo.js';
 import { heightAt } from './heightfield.js';
+import { makeBarkTexture } from './textures.js';
 
 const TREE_HASH = new Map(); // "cellX:cellZ" -> [[x,z], ...]
 
-export function buildForest(scene) {
-  const isMobile = matchMedia('(pointer: coarse)').matches;
-  const COUNT = isMobile ? 7000 : 14000;
+export function buildForest(scene, quality = 'high') {
+  const COUNT = quality === 'low' ? 5000 : quality === 'medium' ? 9000 : 14000;
   const trunkGeo = new THREE.CylinderGeometry(0.35, 0.55, 3, 5);
   const canGeo = new THREE.ConeGeometry(2.6, 7.5, 6);
-  const trunk = new THREE.InstancedMesh(trunkGeo, new THREE.MeshLambertMaterial({ color: 0x6a4a32 }), COUNT);
-  const canopy = new THREE.InstancedMesh(canGeo, new THREE.MeshLambertMaterial({ color: 0x2e6b3e }), COUNT);
+  const trunk = new THREE.InstancedMesh(trunkGeo,
+    new THREE.MeshStandardMaterial({ map: makeBarkTexture(), roughness: 0.95 }), COUNT);
+  const canopy = new THREE.InstancedMesh(canGeo,
+    new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.85, metalness: 0 }), COUNT);
+  // shadows: the canopy silhouette is what reads on the ground; skip the
+  // thin trunk to save a chunk of the (already instance-heavy) shadow pass.
+  canopy.castShadow = true;
+  trunk.receiveShadow = true; canopy.receiveShadow = true;
   const m = new THREE.Matrix4(), q = new THREE.Quaternion(), s = new THREE.Vector3(), p = new THREE.Vector3();
   const col = new THREE.Color();
   let placed = 0, guard = 0;

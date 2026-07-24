@@ -135,6 +135,84 @@ One input abstraction (`core/input.js`) → actions (`move`, `steer`, `throttle`
 coarse pointer as in the 2D game. `touch-action: none`, safe-area insets — copy the
 2D game's proven mobile CSS (already done in prototype).
 
+## 9. Rendering upgrade (post Phase-6 graphics pass)
+
+The Phase 1–6 prototype used flat `MeshLambertMaterial`, no shadows, and a solid-
+color background. A dedicated graphics pass moved the whole scene to PBR + real-
+time shadows + a procedural sky/reflection system, still with **zero external
+assets** — every texture is drawn at runtime with the Canvas 2D API
+(`world/textures.js`: ground, roof, siding, window, bark, asphalt) and every
+"environment map" is a cube-camera render of our own hand-built sky dome and
+world, not a downloaded HDRI. This is a large upgrade in visual fidelity for
+effectively zero added load time (still one HTTP request for `three.module.min.js`
++ a handful of small vendored `three/examples/jsm` postprocessing files, ~112 KB).
+
+**What changed:**
+- **Materials:** every surface (terrain, roads, buildings, trees, car, character,
+  water) moved from `MeshLambertMaterial`/`MeshBasicMaterial` to
+  `MeshStandardMaterial` with tuned roughness/metalness per surface.
+- **Shadows:** `renderer.shadowMap` enabled (`PCFSoftShadowMap`). The sun
+  (`DirectionalLight`) casts a shadow whose camera frustum is fixed-size
+  (150×150 m) but **repositioned every frame to follow the player**
+  (`sun.position`/`sun.target` both offset from the current focus point along
+  the calendar's `sunDir`) — the world (4400×3000 m) is far larger than any
+  single shadow map could cover well, so the light follows instead of sitting
+  at a fixed point. Buildings/trees/car/character cast+receive; terrain/roads/
+  water receive only.
+- **Tone mapping:** `THREE.ACESFilmicToneMapping`, exposure 1.05 — the filmic
+  response is most of the difference between "3D demo" and "game" lighting.
+- **Sky + environment (`world/sky.js`):** a large (1200 m radius) inverted
+  sphere with a vertex-colored horizon→zenith gradient, driven by
+  `sim/calendar.js`'s day/night colors, **repositioned to follow the camera
+  every frame** (`sky.follow(x, z)`) — a lesson learned the hard way: a sky
+  dome fixed at world origin will poke past the camera's far clip plane once
+  the player is more than `far − radius` units from center, showing a hole of
+  raw black clear-color. A throttled `CubeCamera` (`buildEnvProbe`, updates
+  ~2×/sec) captures that sky + world into a small cubemap assigned to
+  `scene.environment` (free image-based ambient specular for every PBR
+  material) and to the water material's `envMap` (actual reflections instead
+  of a flat blue disc).
+- **Post-processing:** `EffectComposer` → `RenderPass` → `UnrealBloomPass` →
+  `OutputPass`, vendored from `three/examples/jsm` into `lib/three-addons/`
+  (same import-map trick as core three — they import bare `'three'`, which
+  resolves the same way). Desktop-tier only.
+- **SSAO was tried and deliberately left out.** It needs a WebGL2
+  depth-texture render target; under a *software-rendered* WebGL context
+  (SwiftShader) it triggered a hard GPU-process crash on scene start that
+  wasn't catchable via try/catch. Bloom alone needs no depth texture and
+  tested clean at every setting. Re-adding SSAO is reasonable future work
+  *if* verified on real hardware first — don't re-enable it from a sandbox
+  that only has software rendering available.
+- **Quality tiers + software-renderer detection:** `isLowPower = isTouch ||
+  isSoftwareRenderer(gl)`, checked once at boot in `main.js`. The renderer
+  check matters beyond mobile: Chrome silently falls back to SwiftShader on
+  real desktops when GPU drivers are blocklisted, and that's a genuine subset
+  of real users, not just this sandbox — asking a software rasterizer to
+  shadow-map 14k tree instances plus a 128 px cube probe is what actually
+  crashed this build in testing (confirmed by reproducing the crash at full
+  settings and clearing it purely by lowering tree count/shadow resolution/
+  probe size, with no other code change). Low tier: 5,000 trees, 1024
+  shadow map, 64 px env probe, no post-processing. High tier: 14,000 trees,
+  2048 shadow map, 128 px env probe, bloom on.
+
+**Updated performance budget** (supersedes the draw-call/triangle numbers in
+§7, which predate shadows/PBR/postprocessing):
+
+| Metric | Budget |
+|---|---|
+| Draw calls | ≤ 320 (unchanged shape; shadow pass adds a second pass over the same objects, not new draw calls) |
+| Triangles | ≤ 600k desktop (14k trees + denser car/character), ≤ 300k low-tier |
+| Shadow map | 2048² desktop / 1024² low-tier, single cascade following the player |
+| Env probe | 128 px cube desktop / 64 px low-tier, refreshed every 30th frame |
+| Load (cold) | ≤ 3.5 s on 4G (three.min ~655 KB + ~112 KB postprocessing addons + code; still zero downloaded textures/models) |
+
+**Verification note:** all of the above was tested exclusively under headless
+Chromium + SwiftShader (this sandbox has no GPU passthrough). That is
+sufficient to prove correctness (shadows, reflections, materials, sky all
+render exactly as designed) but *not* sufficient to prove desktop-tier
+performance on real hardware — do a real-device pass before assuming the
+14k-tree/2048-shadow/bloom combination holds 60 fps everywhere.
+
 ## 9. Hosting & deploys
 
 GitHub Pages serves the repo root; the game lives at
