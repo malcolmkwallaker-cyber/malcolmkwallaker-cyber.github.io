@@ -28,7 +28,7 @@ import { state, leads } from './core/state.js';
 
 import { mapToWorld } from './world/geo.js';
 import { heightAt } from './world/heightfield.js';
-import { buildTerrain, buildWater, buildRoadRibbons, setWaterEnvMap } from './world/terrain.js';
+import { buildTerrain, buildWater, buildRoadRibbons, setWaterEnvMap, tickWater, bakeTerrainAO } from './world/terrain.js';
 import { buildTowns, buildLocations, buildLandmarks, colliders } from './world/buildings.js';
 import { buildForest } from './world/forest.js';
 import { buildSky, buildEnvProbe } from './world/sky.js';
@@ -136,6 +136,7 @@ buildTowns(scene);
 const locationObjs = buildLocations(scene);
 buildLandmarks(scene);
 buildForest(scene, QUALITY);
+bakeTerrainAO(); // needs every collider/tree placed above — see world/terrain.js
 
 // procedural environment probe: gives every PBR material believable
 // ambient specular and gives the lakes an actual reflection, with
@@ -303,6 +304,7 @@ function loop(now) {
   hemi.intensity = 0.25 + calendar.dayness * 0.55;
   envProbe.tick(focusX, focusY, focusZ);
   sky.follow(focusX, focusZ);
+  tickWater(dt);
 
   // ------- interactions / prompts -------
   let promptTxt = '';

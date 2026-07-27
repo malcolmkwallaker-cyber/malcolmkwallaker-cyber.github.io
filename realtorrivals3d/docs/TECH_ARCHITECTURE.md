@@ -213,14 +213,68 @@ render exactly as designed) but *not* sufficient to prove desktop-tier
 performance on real hardware — do a real-device pass before assuming the
 14k-tree/2048-shadow/bloom combination holds 60 fps everywhere.
 
-## 9. Hosting & deploys
+## 10. Hosting & deploys
 
 GitHub Pages serves the repo root; the game lives at
 `https://malcolmkwallaker-cyber.github.io/realtorrivals3d/`. All paths relative
 (`./lib/…`, `./data/…`) — works locally via `python3 -m http.server` and on Pages
 unchanged. No service worker until Phase 12 (then: cache-first for lib/data).
 
-## 10. Testing contract (every phase)
+## 11. Realism pass (post §9 graphics pass)
+
+Pushed further on visual fidelity within the same zero-external-asset,
+zero-build-step constraints — every addition below is either procedurally
+generated at runtime or a material-parameter change, no new HTTP requests
+beyond the one vendored `Sky.js` file (~4 KB).
+
+- **Physically-based sky (`world/sky.js`):** the flat vertex-colored dome is
+  now day/dusk-only fallback. The primary sky is a vendored
+  `three/examples/jsm/objects/Sky.js` — the standard Preetham
+  atmospheric-scattering model (real Rayleigh/Mie scattering from a sun
+  direction, not a painted gradient) — swapped in whenever `dayness > 0.1`.
+  Night has no meaning in that model (it assumes a sun above the horizon), so
+  the original gradient dome still covers night, when the physical sky isn't
+  visible anyway. `sim/calendar.js` feeds both `sunDir` and `dayness` into
+  `sky.setSun()` each tick. Both domes **re-center on the camera every
+  frame** (`sky.follow(x, z)`) — same "world is bigger than a dome fixed at
+  the origin" lesson as §9, now applied to two meshes instead of one.
+- **Procedural normal maps (`world/textures.js`):** every major surface
+  (ground, asphalt, roofs, siding, water) now has a matching tangent-space
+  normal map, generated the same way as the color textures — Canvas 2D API,
+  zero downloads. Each is built from a small stack of integer-frequency sine
+  waves (integer periods tile seamlessly by construction) converted to
+  normals via central-difference slopes with wrap-around indexing (also
+  seam-free). These stay in **linear color space** — unlike the color
+  textures, `colorSpace` is deliberately left unset, since a normal map
+  encodes a vector, not a color, and an sRGB decode would distort every
+  normal on the GPU.
+- **Fresnel water (`world/terrain.js`):** lake material upgraded from
+  `MeshStandardMaterial` to `MeshPhysicalMaterial` with `ior: 1.33` (water's
+  real refractive index) — grazing angles now reflect more and straight-down
+  views stay more see-through, the single biggest cue that reads as "real
+  water" versus a flat translucent disc. `tickWater(dt)` scrolls each lake's
+  normal-map offset every frame for a cheap animated-ripple look (one
+  texture-offset write per lake, no extra geometry).
+- **Car clearcoat paint (`actors/vehicle.js`):** the car body moved to
+  `MeshPhysicalMaterial` with `clearcoat: 1, clearcoatRoughness: 0.1` —
+  models real automotive paint's glossy top coat over the base color instead
+  of one flat specular response.
+- **Baked terrain ambient occlusion (`world/terrain.js:bakeTerrainAO`):** a
+  static substitute for real SSAO, which §9 already ruled out (uncatchable
+  GPU-process crash under software-rendered WebGL). After every
+  building/tree is placed, a one-time pass darkens the ground mesh's
+  existing per-vertex colors near collider footprints and tree trunks —
+  costs nothing per frame, and still sells buildings/trees as sitting *in*
+  the terrain instead of floating on it. Must run after `buildTowns` /
+  `buildLocations` / `buildLandmarks` / `buildForest` (it reads their
+  `colliders` array and tree spatial hash), so `main.js` calls it last in
+  the world-build sequence.
+
+**Verification note:** same caveat as §9 — verified exclusively under
+headless Chromium + SwiftShader, sufficient to prove correctness but not
+real-hardware performance.
+
+## 12. Testing contract (every phase)
 
 - `node --input-type=module -e "import('./data/game-data.js')"` still passes.
 - Serve locally + Playwright smoke test: page loads with **zero console errors**,

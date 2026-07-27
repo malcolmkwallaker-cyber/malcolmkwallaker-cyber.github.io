@@ -1,38 +1,48 @@
 // ============================================================
-// world/sky.js — a vertex-colored gradient sky dome (reads far
-// more natural than a flat background color) plus a procedural
-// cube-camera environment map. The env map is fully generated
-// in-engine (no HDRI download) and gives every PBR material in
-// the scene believable ambient specular, and gives the water
-// material an actual reflection instead of a flat blue disc.
+// world/sky.js — two skies, swapped by time of day, plus a
+// procedural cube-camera environment map:
+//
+//  1. A physically-based atmospheric-scattering sky (Preetham
+//     model, vendored three/examples/jsm Sky.js) for day/dusk —
+//     real Rayleigh/Mie scattering driven by the sun direction,
+//     the same technique behind most "realistic" three.js scenes.
+//     It has no concept of night (the model assumes a sun above
+//     the horizon), so:
+//  2. A vertex-colored gradient dome (the original implementation)
+//     covers night, when the physical sky isn't visible anyway.
+//
+// The env probe is a cube camera pointed at whichever sky/world is
+// currently showing — no HDRI download, no external assets.
 // ============================================================
 'use strict';
 
 import * as THREE from 'three';
+import { Sky } from '../../lib/three-addons/objects/Sky.js';
+
+const DOME_RADIUS = 1150; // stay comfortably inside the camera's far plane (1400)
 
 export function buildSky(scene) {
-  const geo = new THREE.SphereGeometry(1200, 24, 16);
+  // ---- night dome: vertex-colored gradient ----
+  const geo = new THREE.SphereGeometry(DOME_RADIUS, 24, 16);
   const pos = geo.attributes.position;
   const colors = new Float32Array(pos.count * 3);
   geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-  const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+  const nightMesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
     vertexColors: true, side: THREE.BackSide, fog: false, depthWrite: false,
   }));
-  mesh.renderOrder = -10;
-  // NOT matrixAutoUpdate:false here — the dome has to re-center on the
-  // camera every frame (see follow()) since it's a fixed 1200-unit
-  // radius but the world is ~4400x3000: parked at the origin, anything
-  // more than (cameraFar - 1200) units from world center would poke the
-  // far side of the dome past the camera's far plane and show as a
-  // hole straight through to the WebGL clear color (black).
-  scene.add(mesh);
+  nightMesh.renderOrder = -10;
+  // NOT matrixAutoUpdate:false — both domes re-center on the camera every
+  // frame (see follow()): the world is ~4400x3000, far bigger than a dome
+  // fixed at the origin could safely cover without poking past the far
+  // clip plane on one side and showing a hole through to black.
+  scene.add(nightMesh);
 
   const zenith = new THREE.Color(), horizon = new THREE.Color(), out = new THREE.Color();
   function setColors(horizonColor, zenithColor) {
     zenith.copy(zenithColor); horizon.copy(horizonColor);
     const colorAttr = geo.attributes.color;
     for (let i = 0; i < pos.count; i++) {
-      const y = pos.getY(i) / 1200; // -1..1
+      const y = pos.getY(i) / DOME_RADIUS; // -1..1
       const t = Math.pow(Math.max(0, y), 0.55);
       out.copy(horizon).lerp(zenith, t);
       colorAttr.setXYZ(i, out.r, out.g, out.b);
@@ -40,9 +50,34 @@ export function buildSky(scene) {
     colorAttr.needsUpdate = true;
   }
 
-  function follow(x, z) { mesh.position.set(x, 0, z); }
+  // ---- day/dusk dome: real atmospheric scattering ----
+  const daySky = new Sky();
+  daySky.scale.setScalar(DOME_RADIUS);
+  daySky.renderOrder = -10;
+  scene.add(daySky);
+  const su = daySky.material.uniforms;
+  su['turbidity'].value = 3.2;     // haze — higher reads more like a humid lake-country sky
+  su['rayleigh'].value = 1.4;      // blue-sky intensity
+  su['mieCoefficient'].value = 0.006;
+  su['mieDirectionalG'].value = 0.82; // sun-glow tightness
 
-  return { mesh, setColors, follow };
+  // Night has no meaning in the Preetham model (built for a sun above the
+  // horizon), so below a dayness threshold we show the hand-authored
+  // gradient dome instead — the crossover happens near dusk when both are
+  // already dark/warm-toned, so the hard swap doesn't read as a pop.
+  function setSun(sunDir, dayness) {
+    su['sunPosition'].value.copy(sunDir);
+    const showDay = dayness > 0.1;
+    daySky.visible = showDay;
+    nightMesh.visible = !showDay;
+  }
+
+  function follow(x, z) {
+    nightMesh.position.set(x, 0, z);
+    daySky.position.set(x, 0, z);
+  }
+
+  return { mesh: nightMesh, setColors, setSun, follow };
 }
 
 export function buildEnvProbe(renderer, scene, size = 128) {

@@ -20,7 +20,14 @@ const rimMat = new THREE.MeshStandardMaterial({ color: 0xd8dde2, roughness: 0.35
 
 export function buildCar(colorHex) {
   const g = new THREE.Group();
-  const body = box(2.1, 0.8, 4.4, colorHex, { roughness: 0.35, metalness: 0.45 });
+  // Real automotive paint is a base coat under a thin, glossy clearcoat —
+  // MeshPhysicalMaterial's clearcoat layer is exactly that: a second,
+  // near-mirror specular response on top of the base color/roughness,
+  // which is what actually reads as "car paint" instead of "plastic toy."
+  const body = new THREE.Mesh(new THREE.BoxGeometry(2.1, 0.8, 4.4), new THREE.MeshPhysicalMaterial({
+    color: colorHex, roughness: 0.4, metalness: 0.6, clearcoat: 1, clearcoatRoughness: 0.1,
+  }));
+  body.castShadow = true; body.receiveShadow = true;
   body.position.y = 0.85; g.add(body);
   const cab = box(1.8, 0.7, 2.2, 0x9fd7ef, { roughness: 0.08, metalness: 0.3 });
   cab.position.set(0, 1.55, -0.2); g.add(cab);

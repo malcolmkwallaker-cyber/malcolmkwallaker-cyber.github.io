@@ -49,6 +49,7 @@ export function createCalendar(scene, sky) {
       horizon.copy(skyNight).lerp(skyDay, dayness).lerp(skyDusk, duskness * 0.55);
       zenith.copy(zenithNight).lerp(zenithDay, dayness);
       sky.setColors(horizon, zenith);
+      sky.setSun(sunDir, dayness);
       scene.fog.color.copy(horizon);
     },
   };

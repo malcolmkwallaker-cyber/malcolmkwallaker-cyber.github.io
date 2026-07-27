@@ -151,3 +151,83 @@ export function makeAsphaltTexture() {
   asphaltTex.repeat.set(1, 40);
   return asphaltTex;
 }
+
+// ---------- procedural normal maps ----------
+// Normal maps encode XYZ vector components as RGB, not color — must
+// stay in linear space (no sRGB decode) or the GPU distorts every
+// normal. toTexture() above sets colorSpace=SRGBColorSpace for the
+// color textures; this sibling helper deliberately leaves it default
+// (linear) for anything used as a `normalMap`.
+function toDataTexture(c, repeat) {
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  if (repeat) tex.repeat.set(repeat, repeat);
+  return tex;
+}
+
+// Builds a seamlessly-tileable height field from a handful of integer-
+// frequency sine waves (integer periods over [0, 2π) tile perfectly by
+// construction — no seams, no need for periodic hash-noise blending),
+// then converts it to a tangent-space normal map via central-difference
+// slopes with wrap-around indexing (also seam-free).
+function makeNormalMap(size, octaves, strength) {
+  const waves = [];
+  for (let o = 0; o < octaves; o++) {
+    waves.push({
+      fx: Math.round(rand(1, 3 + o * 2)) || 1,
+      fz: Math.round(rand(1, 3 + o * 2)) || 1,
+      amp: 1 / (o + 1.4),
+      phase: rand(0, Math.PI * 2),
+    });
+  }
+  const h = new Float32Array(size * size);
+  for (let z = 0; z < size; z++) {
+    for (let x = 0; x < size; x++) {
+      let v = 0;
+      for (const w of waves) {
+        v += Math.sin((x / size) * Math.PI * 2 * w.fx + (z / size) * Math.PI * 2 * w.fz + w.phase) * w.amp;
+      }
+      h[z * size + x] = v;
+    }
+  }
+  const c = canvas(size);
+  const ctx = c.getContext('2d');
+  const img = ctx.createImageData(size, size);
+  for (let z = 0; z < size; z++) {
+    for (let x = 0; x < size; x++) {
+      const xm = (x - 1 + size) % size, xp = (x + 1) % size;
+      const zm = (z - 1 + size) % size, zp = (z + 1) % size;
+      const dx = (h[z * size + xp] - h[z * size + xm]) * strength;
+      const dz = (h[zp * size + x] - h[zm * size + x]) * strength;
+      // tangent-space normal (three.js convention: +Z out of the surface)
+      let nx = -dx, ny = -dz, nz = 1;
+      const len = Math.hypot(nx, ny, nz) || 1;
+      nx /= len; ny /= len; nz /= len;
+      const idx = (z * size + x) * 4;
+      img.data[idx] = (nx * 0.5 + 0.5) * 255;
+      img.data[idx + 1] = (ny * 0.5 + 0.5) * 255;
+      img.data[idx + 2] = (nz * 0.5 + 0.5) * 255;
+      img.data[idx + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  return c;
+}
+
+const normalCache = new Map();
+function cachedNormalTexture(key, size, octaves, strength, repeat) {
+  if (normalCache.has(key)) return normalCache.get(key);
+  const tex = toDataTexture(makeNormalMap(size, octaves, strength), repeat);
+  normalCache.set(key, tex);
+  return tex;
+}
+
+// Gentle, broad undulation — grass/dirt catching low sun at a grazing angle.
+export function makeGroundNormalMap() { return cachedNormalTexture('ground', 96, 3, 2.2, 220); }
+// Coarser, higher-contrast bumps — asphalt grain.
+export function makeAsphaltNormalMap() { return cachedNormalTexture('asphalt', 64, 3, 3.2, 40); }
+// Fine cross-hatch — shingle/plank relief for roofs and siding.
+export function makeRoofNormalMap() { return cachedNormalTexture('roof', 48, 2, 4, 3); }
+export function makeSidingNormalMap() { return cachedNormalTexture('siding', 48, 2, 3.2, 2); }
+// Small, fast ripples — animated (offset-scrolled) on the water material.
+export function makeWaterNormalMap() { return cachedNormalTexture('water', 64, 4, 2.6, 60); }

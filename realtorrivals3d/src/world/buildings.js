@@ -10,7 +10,10 @@ import * as THREE from 'three';
 import { rand, rng, choice } from '../core/rng.js';
 import { TOWNS, LOCATIONS, mapToWorld, lakeSDF, roadDist } from './geo.js';
 import { heightAt } from './heightfield.js';
-import { makeRoofTexture, makeSidingTexture, makeWindowTexture } from './textures.js';
+import {
+  makeRoofTexture, makeSidingTexture, makeWindowTexture,
+  makeRoofNormalMap, makeSidingNormalMap,
+} from './textures.js';
 
 export const colliders = []; // {x,z,hx,hz}
 export const locationObjs = [];
@@ -40,6 +43,7 @@ export function box(w, h, d, color, opts = {}) {
     transparent: !!opts.opacity, opacity: opts.opacity ?? 1,
   };
   if (opts.map) matParams.map = opts.map;
+  if (opts.normalMap) { matParams.normalMap = opts.normalMap; matParams.normalScale = opts.normalScale ?? new THREE.Vector2(1, 1); }
   const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshStandardMaterial(matParams));
   mesh.castShadow = true; mesh.receiveShadow = true;
   return mesh;
@@ -56,11 +60,17 @@ export function buildHouse(scene, x, z, opts = {}) {
   const g = new THREE.Group();
   const w = opts.w || rand(8, 12), d = opts.d || rand(7, 10), h = opts.h || rand(4, 6);
   const bodyCol = opts.color ?? choice([0xd8cfc0, 0xb8c4cf, 0xc9a886, 0x9fb28f, 0xd4b8b0]);
-  const body = box(w, h, d, bodyCol, { map: makeSidingTexture(bodyCol), roughness: 0.8 });
+  const body = box(w, h, d, bodyCol, {
+    map: makeSidingTexture(bodyCol), roughness: 0.8,
+    normalMap: makeSidingNormalMap(), normalScale: new THREE.Vector2(0.6, 0.6),
+  });
   body.position.y = h / 2; g.add(body);
   const roofColor = opts.roof ?? 0x7a4a3a;
   const roof = new THREE.Mesh(new THREE.CylinderGeometry(0, w * 0.72, h * 0.7, 4),
-    new THREE.MeshStandardMaterial({ map: makeRoofTexture(roofColor), roughness: 0.75, metalness: 0.03 }));
+    new THREE.MeshStandardMaterial({
+      map: makeRoofTexture(roofColor), roughness: 0.75, metalness: 0.03,
+      normalMap: makeRoofNormalMap(), normalScale: new THREE.Vector2(0.8, 0.8),
+    }));
   roof.rotation.y = Math.PI / 4; roof.position.y = h + h * 0.35;
   roof.scale.z = d / w; roof.castShadow = true; roof.receiveShadow = true; g.add(roof);
 
