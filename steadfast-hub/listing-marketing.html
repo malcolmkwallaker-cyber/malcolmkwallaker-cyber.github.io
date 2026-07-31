@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Listing Marketing — Steadfast Real Estate Co. Hub</title>
+<link rel="icon" href="assets/flag-badge-gold.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Playfair+Display:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/hub.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="lockup" href="index.html">
+      <img src="assets/flag-mark-white.svg" alt="Steadfast Real Estate Co. mark">
+      <span class="name">Steadfast <span>Real Estate Co.</span></span>
+    </a>
+    <nav>
+      <a href="index.html">Hub</a>
+      <a href="transaction-services.html">Transactions</a>
+      <a href="listing-marketing.html" class="active">Marketing</a>
+      <a href="policies.html">Policies</a>
+      <a href="office-exclusives.html">Exclusives</a>
+    </nav>
+  </div>
+</header>
+<section class="hero">
+  <div class="hero-inner">
+      <p class="kicker">Listing Marketing</p>
+      <h1>Order marketing for a <span class="au">listing.</span></h1>
+      <p class="lede">Pick the property, pick the services, tell us how to get in. The brand desk handles the rest.</p>
+  </div>
+</section>
+<div class="wrap">
+
+  
+
+  <div id="lm-root"></div>
+
+</div>
+
+<footer class="footer-band">
+  <div class="fb-inner">
+    <span class="tag">The Standard We Hold</span>
+    <span class="rule"></span>
+    <img src="assets/flag-badge-gold.svg" alt="Steadfast Real Estate Co.">
+    <span class="rule"></span>
+    <span class="tag">The Reach We Deliver</span>
+  </div>
+</footer>
+
+<script src="js/confetti.js"></script>
+<script>
+(function () {
+  var root = document.getElementById("lm-root");
+  var STEPS = ["Property", "Services", "Access", "Schedule", "Review", "Done"];
+  var PROPERTIES = [
+    { addr: "1420 Cedar Ridge Dr, Grand Rapids, MN 55744", agent: "Malcolm Wallaker", lc: "In-house LC", status: "Under contract" },
+    { addr: "8215 Birchwood Lane, Grand Rapids, MN 55744", agent: "Malcolm Wallaker", lc: "In-house LC", status: "Active buyer file" },
+    { addr: "622 Lakeview Terrace, Cohasset, MN 55721", agent: "Malcolm Wallaker", lc: "Outside LC", status: "Active" }
+  ];
+  var PACKAGES = [
+    { id: "essential", name: "Essential", price: 350, pop: false,
+      feats: ["Interior/exterior photos", "MLS-ready edits", "Branded flyer (digital)", "Yard sign install"] },
+    { id: "signature", name: "Signature", price: 650, pop: true,
+      feats: ["Everything in Essential", "Drone exteriors", "Twilight hero shot", "Printed flyers (50)", "Social launch posts"] },
+    { id: "premier", name: "Premier", price: 1100, pop: false,
+      feats: ["Everything in Signature", "Walkthrough video", "3D tour", "Property website", "Neighbor postcards (100)"] }
+  ];
+  var CATALOG = {
+    "Photography": [
+      { id: "photos", name: "Interior/Exterior photos", price: 200, desc: "Up to 35 edited images, MLS-ready" },
+      { id: "drone", name: "Drone exteriors", price: 150, desc: "FAA-licensed pilot, 8–12 aerials" },
+      { id: "twilight", name: "Twilight shoot", price: 125, desc: "Golden-hour hero shots" }
+    ],
+    "Video & 3D": [
+      { id: "video", name: "Walkthrough video", price: 300, desc: "60–90s vertical + horizontal cuts" },
+      { id: "tour3d", name: "3D tour", price: 225, desc: "Full dollhouse scan" }
+    ],
+    "Print": [
+      { id: "flyers", name: "Printed flyers (50)", price: 75, desc: "Heavy stock, brand template" },
+      { id: "postcards", name: "Neighbor postcards (100)", price: 140, desc: "Just Listed, printed + mailed" }
+    ],
+    "Signage": [
+      { id: "sign", name: "Yard sign install", price: 60, desc: "Install + removal included" },
+      { id: "riders", name: "Custom sign riders", price: 35, desc: "Coming Soon, Pool, Waterfront…" }
+    ],
+    "Digital": [
+      { id: "social", name: "Social launch posts", price: 90, desc: "3 branded posts, sized per platform" },
+      { id: "site", name: "Property website", price: 120, desc: "Single-property page with lead capture" }
+    ]
+  };
+
+  var state = {
+    step: 0,
+    property: null,
+    mode: "packages",     // or "alacarte"
+    cat: "Photography",
+    pkg: null,
+    items: {},            // id -> item
+    access: null,
+    combo: "",
+    photoDate: "",
+    liveDate: "",
+    notes: ""
+  };
+
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function money(n) { return "$" + n.toLocaleString(); }
+  function stepper() {
+    return '<div class="stepper">' + STEPS.map(function (s, i) {
+      var cls = i === state.step ? "now" : i < state.step ? "done" : "";
+      return '<span class="st ' + cls + '">' + (i + 1) + " · " + s + "</span>";
+    }).join("") + "</div>";
+  }
+  function cartTotal() {
+    var t = 0;
+    if (state.pkg) t += PACKAGES.find(function (p) { return p.id === state.pkg; }).price;
+    Object.keys(state.items).forEach(function (k) { t += state.items[k].price; });
+    return t;
+  }
+  function cartCount() {
+    return (state.pkg ? 1 : 0) + Object.keys(state.items).length;
+  }
+
+  /* ---- Step 1: Property ---- */
+  function renderProperty() {
+    root.innerHTML = stepper() +
+      '<div class="card"><h2>Which property is this for?</h2>' +
+      PROPERTIES.map(function (p, i) {
+        var sel = state.property === i;
+        return '<div class="svc-item" style="cursor:pointer" data-prop="' + i + '">' +
+          '<div><div class="s-name">' + esc(p.addr) + '</div>' +
+          '<div class="s-desc">' + esc(p.agent) + " · " + esc(p.lc) + " · " + esc(p.status) + "</div></div>" +
+          '<span class="btn ' + (sel ? "btn-gold" : "btn-ghost") + '" style="padding:8px 18px">' + (sel ? "Selected" : "Select") + "</span></div>";
+      }).join("") +
+      '<div class="wizard-nav"><span></span><button class="btn btn-navy" id="next"' + (state.property == null ? " disabled" : "") + ">Continue</button></div></div>";
+    root.querySelectorAll("[data-prop]").forEach(function (row) {
+      row.addEventListener("click", function () {
+        state.property = Number(row.getAttribute("data-prop"));
+        renderProperty();
+      });
+    });
+    document.getElementById("next").addEventListener("click", function () { state.step = 1; renderServices(); window.scrollTo(0, 0); });
+  }
+
+  /* ---- Step 2: Services ---- */
+  function renderServices() {
+    var html = stepper() +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">' +
+      "<h2 style=\"margin:0\">Choose your services</h2>" +
+      '<span class="cart-badge">' + cartCount() + " in cart · " + money(cartTotal()) + "</span></div>";
+
+    if (state.mode === "packages") {
+      html += '<div class="tiers">' + PACKAGES.map(function (p) {
+        return '<div class="tier' + (state.pkg === p.id ? " selected" : "") + '" data-pkg="' + p.id + '">' +
+          (p.pop ? '<span class="pop">Most popular</span>' : "") +
+          '<div class="t-name">' + p.name + '</div><div class="t-price">' + money(p.price) + "</div>" +
+          "<ul>" + p.feats.map(function (f) { return "<li>" + esc(f) + "</li>"; }).join("") + "</ul>" +
+          '<span class="btn ' + (state.pkg === p.id ? "btn-gold" : "btn-navy") + '">' + (state.pkg === p.id ? "Selected" : "Choose " + p.name) + "</span></div>";
+      }).join("") + "</div>" +
+      '<div style="text-align:center;margin-top:20px"><button class="linklike" id="switch-mode">Browse individual services instead</button></div>';
+    } else {
+      html += '<div class="svc-cats">' + Object.keys(CATALOG).map(function (c) {
+        return '<button data-cat="' + esc(c) + '"' + (state.cat === c ? ' class="now"' : "") + ">" + esc(c) + "</button>";
+      }).join("") + "</div>" +
+      '<div class="card" style="padding-top:14px;padding-bottom:14px">' +
+      CATALOG[state.cat].map(function (it) {
+        var inCart = !!state.items[it.id];
+        return '<div class="svc-item"><div><div class="s-name">' + esc(it.name) + '</div><div class="s-desc">' + esc(it.desc) + "</div></div>" +
+          '<div style="display:flex;align-items:center;gap:14px"><span class="s-price">' + money(it.price) + "</span>" +
+          '<button class="btn ' + (inCart ? "btn-gold" : "btn-ghost") + '" style="padding:8px 18px" data-item="' + it.id + '">' + (inCart ? "Added ✓" : "Add") + "</button></div></div>";
+      }).join("") + "</div>" +
+      '<div style="text-align:center;margin-top:20px"><button class="linklike" id="switch-mode">Back to packages</button></div>';
+    }
+
+    html += '<div class="wizard-nav"><button class="linklike" id="back">Back</button>' +
+      '<button class="btn btn-navy" id="next"' + (cartCount() === 0 ? " disabled" : "") + ">Continue</button></div>";
+    root.innerHTML = html;
+
+    root.querySelectorAll("[data-pkg]").forEach(function (t) {
+      t.addEventListener("click", function () {
+        var id = t.getAttribute("data-pkg");
+        state.pkg = state.pkg === id ? null : id;
+        renderServices();
+      });
+    });
+    root.querySelectorAll("[data-item]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var id = b.getAttribute("data-item");
+        if (state.items[id]) delete state.items[id];
+        else {
+          var it = CATALOG[state.cat].find(function (x) { return x.id === id; });
+          state.items[id] = it;
+        }
+        renderServices();
+      });
+    });
+    root.querySelectorAll("[data-cat]").forEach(function (b) {
+      b.addEventListener("click", function () { state.cat = b.getAttribute("data-cat"); renderServices(); });
+    });
+    var sw = document.getElementById("switch-mode");
+    if (sw) sw.addEventListener("click", function () {
+      state.mode = state.mode === "packages" ? "alacarte" : "packages";
+      renderServices();
+    });
+    document.getElementById("back").addEventListener("click", function () { state.step = 0; renderProperty(); window.scrollTo(0, 0); });
+    document.getElementById("next").addEventListener("click", function () {
+      if (cartCount() > 0) { state.step = 2; renderAccess(); window.scrollTo(0, 0); }
+    });
+  }
+
+  /* ---- Step 3: Access ---- */
+  function renderAccess() {
+    var opts = ["Combo lockbox", "Electronic lockbox", "Agent will meet the photographer"];
+    root.innerHTML = stepper() +
+      '<div class="card"><h2>How does the photographer get in?</h2>' +
+      '<div class="field"><div class="choice-row">' +
+      opts.map(function (o) {
+        return '<label class="chip"><input type="radio" name="access" value="' + esc(o) + '"' + (state.access === o ? " checked" : "") + '><span>' + esc(o) + "</span></label>";
+      }).join("") + "</div></div>" +
+      '<div class="conditional' + (state.access === "Combo lockbox" ? " show" : "") + '" id="combo-wrap">' +
+      '<div class="field"><label>Combination code <span class="req">*</span></label>' +
+      '<input type="text" id="combo" value="' + esc(state.combo) + '">' +
+      '<div class="err">Required for combo lockbox access.</div></div></div>' +
+      '<div class="wizard-nav"><button class="linklike" id="back">Back</button>' +
+      '<button class="btn btn-navy" id="next">Continue</button></div></div>';
+    root.querySelectorAll('input[name="access"]').forEach(function (r) {
+      r.addEventListener("change", function () {
+        state.access = r.value;
+        document.getElementById("combo-wrap").classList.toggle("show", r.value === "Combo lockbox");
+      });
+    });
+    document.getElementById("back").addEventListener("click", function () { state.step = 1; renderServices(); window.scrollTo(0, 0); });
+    document.getElementById("next").addEventListener("click", function () {
+      state.combo = document.getElementById("combo").value;
+      if (!state.access) return;
+      if (state.access === "Combo lockbox" && !state.combo.trim()) {
+        document.getElementById("combo-wrap").querySelector(".field").classList.add("invalid");
+        return;
+      }
+      state.step = 3; renderSchedule(); window.scrollTo(0, 0);
+    });
+  }
+
+  /* ---- Step 4: Schedule ---- */
+  function renderSchedule() {
+    root.innerHTML = stepper() +
+      '<div class="card"><h2>When do you need it?</h2>' +
+      '<div class="grid-2">' +
+      '<div class="field"><label>Preferred photo date <span class="req">*</span></label>' +
+      '<input type="date" id="photoDate" value="' + esc(state.photoDate) + '"><div class="err">Please pick a date.</div></div>' +
+      '<div class="field"><label>Marketing go-live date <span class="req">*</span></label>' +
+      '<input type="date" id="liveDate" value="' + esc(state.liveDate) + '"><div class="err">Please pick a date.</div></div>' +
+      "</div>" +
+      '<div class="field"><label>Notes for the brand desk</label>' +
+      '<textarea id="notes">' + esc(state.notes) + "</textarea></div>" +
+      '<div class="wizard-nav"><button class="linklike" id="back">Back</button>' +
+      '<button class="btn btn-navy" id="next">Review order</button></div></div>';
+    document.getElementById("back").addEventListener("click", function () { state.step = 2; renderAccess(); window.scrollTo(0, 0); });
+    document.getElementById("next").addEventListener("click", function () {
+      state.photoDate = document.getElementById("photoDate").value;
+      state.liveDate = document.getElementById("liveDate").value;
+      state.notes = document.getElementById("notes").value;
+      var ok = true;
+      ["photoDate", "liveDate"].forEach(function (id) {
+        var bad = !document.getElementById(id).value;
+        document.getElementById(id).closest(".field").classList.toggle("invalid", bad);
+        if (bad) ok = false;
+      });
+      if (ok) { state.step = 4; renderReview(); window.scrollTo(0, 0); }
+    });
+  }
+
+  /* ---- Step 5: Review ---- */
+  function renderReview() {
+    var p = PROPERTIES[state.property];
+    var lines = [];
+    if (state.pkg) {
+      var pk = PACKAGES.find(function (x) { return x.id === state.pkg; });
+      lines.push({ k: pk.name + " package", v: money(pk.price) });
+    }
+    Object.keys(state.items).forEach(function (k) {
+      lines.push({ k: state.items[k].name, v: money(state.items[k].price) });
+    });
+    root.innerHTML = stepper() +
+      '<div class="card"><h2>Review your order</h2>' +
+      '<div class="review-section-title">Property</div>' +
+      '<ul class="review-list">' +
+      '<li><span class="k">Address</span><span class="v">' + esc(p.addr) + "</span></li>" +
+      '<li><span class="k">Agent</span><span class="v">' + esc(p.agent) + "</span></li>" +
+      '<li><span class="k">Coordination</span><span class="v">' + esc(p.lc) + "</span></li></ul>" +
+      '<div class="review-section-title">Services</div>' +
+      '<ul class="review-list">' +
+      lines.map(function (l) { return '<li><span class="k">' + esc(l.k) + '</span><span class="v">' + esc(l.v) + "</span></li>"; }).join("") +
+      '<li><span class="k"><b>Total</b></span><span class="v price" style="font-size:1.15rem">' + money(cartTotal()) + "</span></li></ul>" +
+      '<div class="review-section-title">Access & schedule</div>' +
+      '<ul class="review-list">' +
+      '<li><span class="k">Access</span><span class="v">' + esc(state.access) + (state.combo ? " · code " + esc(state.combo) : "") + "</span></li>" +
+      '<li><span class="k">Photo date</span><span class="v">' + esc(state.photoDate) + "</span></li>" +
+      '<li><span class="k">Go-live date</span><span class="v">' + esc(state.liveDate) + "</span></li>" +
+      (state.notes ? '<li><span class="k">Notes</span><span class="v">' + esc(state.notes) + "</span></li>" : "") +
+      "</ul>" +
+      '<div class="notice">Charges post to your agent bill at month end. Cancel or change any time before the photo date at no cost.</div>' +
+      '<div class="wizard-nav"><button class="linklike" id="back">Back</button>' +
+      '<button class="btn btn-gold" id="submit">Place order</button></div></div>';
+    document.getElementById("back").addEventListener("click", function () { state.step = 3; renderSchedule(); window.scrollTo(0, 0); });
+    document.getElementById("submit").addEventListener("click", function () { state.step = 5; renderDone(); window.scrollTo(0, 0); });
+  }
+
+  /* ---- Step 6: Done ---- */
+  function renderDone() {
+    root.innerHTML = stepper() +
+      '<div class="card success-panel">' +
+      '<img class="mark" src="assets/flag-badge-gold.svg" alt="Steadfast mark">' +
+      "<h2>Marketing services requested</h2>" +
+      '<p class="lede" style="margin:10px auto 0">The brand desk has your order for ' + esc(PROPERTIES[state.property].addr.split(",")[0]) +
+      ". You'll get a confirmation with the photographer's window within one business day.</p>" +
+      '<div class="stat">Order total <b>' + money(cartTotal()) + "</b></div>" +
+      '<div style="margin-top:28px"><a class="btn btn-ghost" href="index.html">Back to the Hub</a></div></div>';
+    launchConfetti();
+  }
+
+  renderProperty();
+})();
+</script>
+</body>
+</html>

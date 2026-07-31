@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Refer an Agent — Steadfast Real Estate Co. Hub</title>
+<link rel="icon" href="assets/flag-badge-gold.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Playfair+Display:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/hub.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="lockup" href="index.html">
+      <img src="assets/flag-mark-white.svg" alt="Steadfast Real Estate Co. mark">
+      <span class="name">Steadfast <span>Real Estate Co.</span></span>
+    </a>
+    <nav>
+      <a href="index.html">Hub</a>
+      <a href="transaction-services.html">Transactions</a>
+      <a href="listing-marketing.html">Marketing</a>
+      <a href="policies.html">Policies</a>
+      <a href="office-exclusives.html">Exclusives</a>
+    </nav>
+  </div>
+</header>
+<section class="hero">
+  <div class="hero-inner">
+      <p class="kicker">Agent Marketing</p>
+      <h1>Refer an agent to <span class="au">Steadfast.</span></h1>
+      <p class="lede">You know who's good in this market. Send them our way — when they join and close, you get paid. Who you were when you walked in; who you become here.</p>
+  </div>
+</section>
+<div class="wrap">
+
+  
+
+  <div class="card">
+    <h2>Bonus tiers</h2>
+    <ul class="review-list">
+      <li><span class="k">Referred agent joins Steadfast</span><span class="v price" style="font-size:1.1rem">$500</span></li>
+      <li><span class="k">They close their first transaction here</span><span class="v price" style="font-size:1.1rem">$1,000</span></li>
+      <li><span class="k">They hit $2M in volume in year one</span><span class="v price" style="font-size:1.1rem">$2,500</span></li>
+    </ul>
+    <div class="notice">Tiers stack — a referral who does all three earns you <b>$4,000</b> total. Paid on your next agent bill cycle after each milestone. Leadership referrals are handled case-by-case.</div>
+  </div>
+
+  <div class="card">
+    <h2>Tell us about them</h2>
+    <form id="ref-form" onsubmit="return false">
+      <div class="grid-2">
+        <div class="field"><label>Agent name <span class="req">*</span></label><input type="text" required><div class="err">Required.</div></div>
+        <div class="field"><label>Current brokerage</label><input type="text"></div>
+        <div class="field"><label>Phone</label><input type="tel"></div>
+        <div class="field"><label>Email</label><input type="email"></div>
+      </div>
+      <div class="field"><label>How do you know them? <span class="req">*</span></label><textarea required></textarea><div class="err">Required.</div></div>
+      <div class="field"><label>May we mention your name when we reach out?</label>
+        <div class="choice-row">
+          <label class="chip"><input type="radio" name="mention" value="Yes" checked><span>Yes</span></label>
+          <label class="chip"><input type="radio" name="mention" value="No"><span>Keep me anonymous</span></label>
+        </div>
+      </div>
+      <div class="wizard-nav"><span></span><button class="btn btn-gold" type="submit" id="ref-submit">Send referral</button></div>
+    </form>
+    <div id="ref-done" style="display:none" class="success-panel">
+      <img class="mark" src="assets/flag-badge-gold.svg" alt="Steadfast mark">
+      <h2>Referral received</h2>
+      <p class="lede" style="margin:10px auto 0">Leadership will reach out personally. We'll keep you posted at every milestone.</p>
+    </div>
+  </div>
+
+</div>
+
+<footer class="footer-band">
+  <div class="fb-inner">
+    <span class="tag">The Standard We Hold</span>
+    <span class="rule"></span>
+    <img src="assets/flag-badge-gold.svg" alt="Steadfast Real Estate Co.">
+    <span class="rule"></span>
+    <span class="tag">The Reach We Deliver</span>
+  </div>
+</footer>
+
+<script src="js/confetti.js"></script>
+<script>
+document.getElementById("ref-submit").addEventListener("click", function () {
+  var form = document.getElementById("ref-form");
+  var ok = true;
+  form.querySelectorAll("[required]").forEach(function (el) {
+    var bad = !el.value.trim();
+    el.closest(".field").classList.toggle("invalid", bad);
+    if (bad) ok = false;
+  });
+  if (!ok) return;
+  form.style.display = "none";
+  document.getElementById("ref-done").style.display = "block";
+  launchConfetti();
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Buyer Under Contract — Steadfast Real Estate Co. Hub</title>
+<link rel="icon" href="assets/flag-badge-gold.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Playfair+Display:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/hub.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="lockup" href="index.html">
+      <img src="assets/flag-mark-white.svg" alt="Steadfast Real Estate Co. mark">
+      <span class="name">Steadfast <span>Real Estate Co.</span></span>
+    </a>
+    <nav>
+      <a href="index.html">Hub</a>
+      <a href="transaction-services.html" class="active">Transactions</a>
+      <a href="listing-marketing.html">Marketing</a>
+      <a href="policies.html">Policies</a>
+      <a href="office-exclusives.html">Exclusives</a>
+    </nav>
+  </div>
+</header>
+<section class="hero">
+  <div class="hero-inner">
+      <div id="wizard-head"></div>
+  </div>
+</section>
+<div class="wrap">
+
+  
+  <div id="wizard-root"></div>
+
+</div>
+
+<footer class="footer-band">
+  <div class="fb-inner">
+    <span class="tag">The Standard We Hold</span>
+    <span class="rule"></span>
+    <img src="assets/flag-badge-gold.svg" alt="Steadfast Real Estate Co.">
+    <span class="rule"></span>
+    <span class="tag">The Reach We Deliver</span>
+  </div>
+</footer>
+
+<script>
+window.WIZARD = {
+  kicker: "Transaction Services · Buy side",
+  title: "Buyer under contract",
+  intro: "Congratulations on the accepted offer. Drop in the paperwork and we'll open coordination for your buyer.",
+  sampleDocs: ["Purchase Agreement.pdf", "Pre-Approval Letter.pdf", "Earnest Money Receipt.pdf"],
+  confirmIntro: "We read your Purchase Agreement, Pre-Approval Letter and Earnest Money Receipt. Confirm what we found and fill in what we couldn't.",
+  confirmFields: [
+    { id: "address",  label: "Property address", type: "text", value: "8215 Birchwood Lane, Grand Rapids, MN 55744", source: "Purchase Agreement", required: true },
+    { id: "buyers",   label: "Buyer name(s)",    type: "text", value: "Jordan & Casey Whitfield", source: "Purchase Agreement", required: true },
+    { id: "price",    label: "Purchase price",   type: "text", value: "$342,500", source: "Purchase Agreement", required: true },
+    { id: "closing",  label: "Closing date",     type: "date", value: "2026-09-18", source: "Purchase Agreement", required: true },
+    { id: "earnest",  label: "Earnest money",    type: "text", value: "$5,000", source: "Earnest Money Receipt", required: true },
+    { id: "lender",   label: "Lender",           type: "text", value: "North Shore Mortgage", source: "Pre-Approval Letter", required: true },
+    { id: "yearbuilt",label: "Year built",       type: "text", value: "", sourceBlank: true, required: true, hint: "We couldn't find this in your documents." }
+  ],
+  questions: [
+    { id: "referral", label: "Is there a referral fee on this transaction?", type: "choice", options: ["Yes", "No"], required: true,
+      reveals: { "Yes": [
+        { id: "referral_amount",    label: "Referral fee amount", type: "text", required: true, hint: "Percentage or flat dollar amount." },
+        { id: "referral_agent",     label: "Referring agent name", type: "text", required: true },
+        { id: "referral_brokerage", label: "Referring brokerage", type: "text", required: true }
+      ]}},
+    { id: "coordination", label: "How much coordination do you want on this file?", type: "choice", options: ["Full coordination", "Compliance only"], required: true,
+      reveals: { "Full coordination": [
+        { id: "title_co",   label: "Preferred title company", type: "text", required: true },
+        { id: "inspection", label: "Inspection date (if scheduled)", type: "date", required: false }
+      ]}},
+    { id: "hoa", label: "Is the property in an HOA?", type: "choice", options: ["Yes", "No"], required: true,
+      reveals: { "Yes": [
+        { id: "hoa_docs_date", label: "Date HOA documents were provided", type: "date", required: true }
+      ]}},
+    { id: "notes", label: "Anything the coordinator should know?", type: "textarea", required: false }
+  ],
+  stats: { asked: 4, instead: 27 },
+  successTitle: "Coordination started",
+  successBody: "Your coordinator will reach out within one business day with the deadline calendar for this file."
+};
+</script>
+<script src="js/confetti.js"></script>
+<script src="js/wizard.js"></script>
+</body>
+</html>

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Policies &amp; Handbook — Steadfast Real Estate Co. Hub</title>
+<link rel="icon" href="assets/flag-badge-gold.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Playfair+Display:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/hub.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="lockup" href="index.html">
+      <img src="assets/flag-mark-white.svg" alt="Steadfast Real Estate Co. mark">
+      <span class="name">Steadfast <span>Real Estate Co.</span></span>
+    </a>
+    <nav>
+      <a href="index.html">Hub</a>
+      <a href="transaction-services.html">Transactions</a>
+      <a href="listing-marketing.html">Marketing</a>
+      <a href="policies.html" class="active">Policies</a>
+      <a href="office-exclusives.html">Exclusives</a>
+    </nav>
+  </div>
+</header>
+<section class="hero">
+  <div class="hero-inner">
+      <p class="kicker">Real Estate Library</p>
+      <h1>Policies &amp; <span class="au">Handbook.</span></h1>
+      <p class="byline">Last updated July 14, 2026 · Maintained by Charlene Brooks, Director of Operations</p>
+  </div>
+</section>
+<div class="wrap">
+
+  
+
+  <div class="handbook">
+    <aside class="toc card" style="padding:18px">
+      <div class="searchbox">
+        <input type="search" id="policy-search" placeholder="Search the handbook…">
+        <span class="kbd">⌘K</span>
+      </div>
+      <a href="#commissions">Commissions &amp; Splits</a>
+      <a href="#compliance">File Compliance</a>
+      <a href="#advertising">Advertising &amp; Sign Standards</a>
+      <a href="#exclusives">Office Exclusives Policy</a>
+      <a href="#referrals">Referral Fees</a>
+      <a href="#conduct">Professional Conduct</a>
+      <a href="#office">Office &amp; Equipment</a>
+      <a href="#leave">Time Away &amp; Coverage</a>
+    </aside>
+
+    <div id="policy-body">
+      <section class="card policy-section" id="commissions">
+        <h2>Commissions &amp; Splits</h2>
+        <p>Commission disbursements are processed within two business days of a compliant closed file. Splits follow your current agent agreement; cap progress is visible on your monthly agent bill. Bonuses (including agent-referral bonuses) post on the next bill cycle after the qualifying milestone.</p>
+        <p>Commission advances are available on pending files with all contingencies cleared — see the front desk for the advance request form.</p>
+      </section>
+
+      <section class="card policy-section" id="compliance">
+        <h2>File Compliance</h2>
+        <p>Every transaction must be opened through <a href="transaction-services.html">Transaction Services</a> within 48 hours of execution. A file is compliant when it contains the executed agreement, all addenda, agency disclosures, and earnest money documentation. Non-compliant files hold commission disbursement until cured.</p>
+      </section>
+
+      <section class="card policy-section" id="advertising">
+        <h2>Advertising &amp; Sign Standards</h2>
+        <p>All public-facing marketing uses the Steadfast brand system — black, gold and cream, correct logo orientation, no effects. Use the templates in <a href="logos-brand-guide.html">Logos &amp; Brand Guide</a>. Yard signs are installed and removed by our sign vendor only; order through Listing Marketing.</p>
+        <p>Team names and personal brands may appear alongside, never instead of, the brokerage identity required by state rule.</p>
+      </section>
+
+      <section class="card policy-section" id="exclusives">
+        <h2>Office Exclusives Policy</h2>
+        <p>Office exclusives are shared internally on the <a href="office-exclusives.html">Office Exclusives</a> board before public marketing, consistent with the seller's signed instruction and MLS clear-cooperation rules. Do not advertise an office exclusive publicly in any channel, including social media teasers.</p>
+      </section>
+
+      <section class="card policy-section" id="referrals">
+        <h2>Referral Fees</h2>
+        <p>Outgoing referrals must be papered on the company referral agreement before the client is introduced — use the <a href="outgoing-referral.html">Outgoing Referral</a> flow. Incoming and outgoing referral fees are disclosed on the transaction file. Unwritten referral arrangements are not enforceable and not permitted.</p>
+      </section>
+
+      <section class="card policy-section" id="conduct">
+        <h2>Professional Conduct</h2>
+        <p>We hold the standard: honest dealing, prompt communication, and respect for clients, colleagues and cooperating agents. Complaints are routed to the managing broker and handled directly. Fair housing law is a floor, not a ceiling — every client gets our full reach.</p>
+      </section>
+
+      <section class="card policy-section" id="office">
+        <h2>Office &amp; Equipment</h2>
+        <p>Office hours are 8:30–5:00 weekdays; agent key fobs work 24/7. Conference rooms book through the front desk calendar. Printing is unlimited for transaction documents; large-format marketing prints route through the brand desk.</p>
+      </section>
+
+      <section class="card policy-section" id="leave">
+        <h2>Time Away &amp; Coverage</h2>
+        <p>Going out of town? Arrange a covering agent and notify your coordinator so active files never wait. The office maintains a coverage list of agents willing to host showings and inspections for a standard courtesy fee.</p>
+      </section>
+    </div>
+  </div>
+
+</div>
+
+<footer class="footer-band">
+  <div class="fb-inner">
+    <span class="tag">The Standard We Hold</span>
+    <span class="rule"></span>
+    <img src="assets/flag-badge-gold.svg" alt="Steadfast Real Estate Co.">
+    <span class="rule"></span>
+    <span class="tag">The Reach We Deliver</span>
+  </div>
+</footer>
+
+<script>
+(function () {
+  var input = document.getElementById("policy-search");
+  var sections = Array.prototype.slice.call(document.querySelectorAll(".policy-section"));
+  var originals = sections.map(function (s) { return s.innerHTML; });
+
+  function filter() {
+    var q = input.value.trim().toLowerCase();
+    sections.forEach(function (s, i) {
+      s.innerHTML = originals[i];
+      if (!q) { s.style.display = ""; return; }
+      var hit = s.textContent.toLowerCase().indexOf(q) !== -1;
+      s.style.display = hit ? "" : "none";
+      if (hit) {
+        var rx = new RegExp("(" + q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + ")", "gi");
+        s.querySelectorAll("p").forEach(function (p) {
+          p.innerHTML = p.innerHTML.replace(rx, "<mark>$1</mark>");
+        });
+      }
+    });
+  }
+  input.addEventListener("input", filter);
+  document.addEventListener("keydown", function (e) {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+      e.preventDefault();
+      input.focus();
+    }
+  });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cancel &amp; Relist — Steadfast Real Estate Co. Hub</title>
+<link rel="icon" href="assets/flag-badge-gold.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Playfair+Display:ital,wght@0,500;0,600;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/hub.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="lockup" href="index.html">
+      <img src="assets/flag-mark-white.svg" alt="Steadfast Real Estate Co. mark">
+      <span class="name">Steadfast <span>Real Estate Co.</span></span>
+    </a>
+    <nav>
+      <a href="index.html">Hub</a>
+      <a href="transaction-services.html" class="active">Transactions</a>
+      <a href="listing-marketing.html">Marketing</a>
+      <a href="policies.html">Policies</a>
+      <a href="office-exclusives.html">Exclusives</a>
+    </nav>
+  </div>
+</header>
+<section class="hero">
+  <div class="hero-inner">
+      <div id="wizard-head"></div>
+  </div>
+</section>
+<div class="wrap">
+
+  
+  <div id="wizard-root"></div>
+
+</div>
+
+<footer class="footer-band">
+  <div class="fb-inner">
+    <span class="tag">The Standard We Hold</span>
+    <span class="rule"></span>
+    <img src="assets/flag-badge-gold.svg" alt="Steadfast Real Estate Co.">
+    <span class="rule"></span>
+    <span class="tag">The Reach We Deliver</span>
+  </div>
+</footer>
+
+<script>
+window.WIZARD = {
+  kicker: "Transaction Services · Listing",
+  title: "Cancel & relist",
+  intro: "Reset days on market the compliant way. Upload the current listing paperwork and pick your relist date.",
+  sampleDocs: ["Active Listing Agreement.pdf", "MLS Listing Sheet.pdf"],
+  confirmIntro: "We read the active Listing Agreement and the current MLS sheet. Confirm what we found.",
+  confirmFields: [
+    { id: "address",   label: "Property address", type: "text", value: "622 Lakeview Terrace, Cohasset, MN 55721", source: "Listing Agreement", required: true },
+    { id: "listprice", label: "Current list price", type: "text", value: "$289,900", source: "MLS Listing Sheet", required: true },
+    { id: "orig_date", label: "Original list date", type: "date", value: "2026-04-03", source: "MLS Listing Sheet", required: true },
+    { id: "expires",   label: "Listing expiration", type: "date", value: "2026-10-03", source: "Listing Agreement", required: true }
+  ],
+  questions: [
+    { id: "relist_date", label: "When should the property relist?", type: "date", required: true,
+      hint: "MLS rules require at least one full day off market." },
+    { id: "price_change", label: "Will the price change at relist?", type: "choice", options: ["Yes", "No"], required: true,
+      reveals: { "Yes": [
+        { id: "new_price", label: "New list price", type: "text", required: true }
+      ]}},
+    { id: "remarks_refresh", label: "Refresh the public remarks?", type: "choice", options: ["Yes", "No"], required: true,
+      reveals: { "Yes": [
+        { id: "new_remarks", label: "New public remarks", type: "textarea", required: true }
+      ]}},
+    { id: "new_photos", label: "New photos before relist?", type: "choice", options: ["Yes", "No"], required: true,
+      hint: "If yes, we'll open a Listing Marketing order for you after this." }
+  ],
+  stats: { asked: 3, instead: 12 },
+  successTitle: "Cancel & relist scheduled",
+  successBody: "We'll cancel the current MLS entry, hold it off market, and relist on your chosen date with the updates you asked for."
+};
+</script>
+<script src="js/confetti.js"></script>
+<script src="js/wizard.js"></script>
+</body>
+</html>
