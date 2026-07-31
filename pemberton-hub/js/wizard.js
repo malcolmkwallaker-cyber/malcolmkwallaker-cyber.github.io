@@ -230,7 +230,7 @@
     root.innerHTML =
       stepper() +
       '<div class="card success-panel">' +
-      '<img class="mark" src="assets/logo-mark-navy-on-cream.png" alt="Pemberton mark">' +
+      '<img class="mark" src="assets/flag-badge-gold.svg" alt="Pemberton mark">' +
       "<h2>" + esc(W.successTitle || "Submitted") + "</h2>" +
       '<p class="lede" style="margin:10px auto 0">' + esc(W.successBody || "Our team has everything it needs. We'll take it from here.") + "</p>" +
       (W.stats
@@ -274,9 +274,12 @@
   /* ---------- boot ---------- */
   var head = document.getElementById("wizard-head");
   if (head) {
+    var words = esc(W.title).trim().split(/\s+/);
+    var lastWord = words.pop();
+    if (!/[.!?]$/.test(lastWord)) lastWord += ".";
     head.innerHTML =
       '<p class="kicker">' + esc(W.kicker || "Transaction Services") + "</p>" +
-      "<h1>" + esc(W.title) + "</h1>" +
+      "<h1>" + (words.length ? words.join(" ") + " " : "") + '<span class="au">' + lastWord + "</span></h1>" +
       '<p class="lede">' + esc(W.intro || "") + "</p>";
   }
   renderDocs();

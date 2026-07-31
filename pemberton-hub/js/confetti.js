@@ -9,7 +9,7 @@ function launchConfetti() {
   var ctx = canvas.getContext("2d");
   var W = (canvas.width = window.innerWidth);
   var H = (canvas.height = window.innerHeight);
-  var colors = ["#C8A860", "#0F1B2D", "#F0541C", "#e2d3b0", "#ffffff"];
+  var colors = ["#C4A15A", "#0C0C0C", "#A8853F", "#E9DDC2", "#ffffff"];
   var pieces = [];
   for (var i = 0; i < 160; i++) {
     pieces.push({
