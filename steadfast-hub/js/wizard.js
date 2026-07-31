@@ -1,4 +1,4 @@
-/* Pemberton Hub — shared transaction wizard engine.
+/* Steadfast Hub — shared transaction wizard engine.
    A page defines window.WIZARD before loading this script:
 
    {
@@ -230,7 +230,7 @@
     root.innerHTML =
       stepper() +
       '<div class="card success-panel">' +
-      '<img class="mark" src="assets/flag-badge-gold.svg" alt="Pemberton mark">' +
+      '<img class="mark" src="assets/flag-badge-gold.svg" alt="Steadfast mark">' +
       "<h2>" + esc(W.successTitle || "Submitted") + "</h2>" +
       '<p class="lede" style="margin:10px auto 0">' + esc(W.successBody || "Our team has everything it needs. We'll take it from here.") + "</p>" +
       (W.stats

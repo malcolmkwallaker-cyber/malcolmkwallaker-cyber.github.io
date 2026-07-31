@@ -1,6 +1,6 @@
-# Pemberton Company Hub
+# Steadfast Real Estate Co. Hub
 
-A recreation of the Pemberton Company Hub intranet (originally at pemberton-flows.onrender.com), rebuilt as a static site so the team can host, study and extend it.
+The Steadfast Real Estate Co. company hub — a static intranet site the team can host, study and extend. Styled after the Steadfast Media design system (near-black + gold + cream, pennant flag mark).
 
 Pure HTML/CSS/JS — no build step. Open `index.html` or serve the folder with any static server.
 
@@ -17,7 +17,7 @@ Pure HTML/CSS/JS — no build step. Open `index.html` or serve the folder with a
 
 ## Shared code
 
-- `css/hub.css` — the Pemberton brand system (navy/gold/cream, rounded cards, dotted rules, tagline footer band)
+- `css/hub.css` — the Steadfast brand system (navy/gold/cream, rounded cards, dotted rules, tagline footer band)
 - `js/wizard.js` — config-driven wizard engine used by all 5 transaction flows (each page defines a `window.WIZARD` object: confirm fields with document-source tags, questions with conditional `reveals`, validation, review summary, success stats)
 - `js/confetti.js` — brand-colored confetti burst for success screens
 
