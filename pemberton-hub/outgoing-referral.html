@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Outgoing Referral — Pemberton Company Hub</title>
+<link rel="icon" href="assets/logo-mark-navy-on-cream.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/hub.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="site-header">
+    <a class="lockup" href="index.html">
+      <img src="assets/logo-mark-navy-on-cream.png" alt="Pemberton Real Estate mark">
+      <span class="name">Pemberton <span>Real Estate</span></span>
+    </a>
+    <nav>
+      <a href="index.html">Hub</a>
+      <a href="transaction-services.html" class="active">Transactions</a>
+      <a href="listing-marketing.html">Marketing</a>
+      <a href="policies.html">Policies</a>
+      <a href="office-exclusives.html">Exclusives</a>
+    </nav>
+  </header>
+
+  <div id="wizard-head"></div>
+  <div id="wizard-root"></div>
+
+  <footer class="footer-band">
+    <span class="tag">The Standard We Hold</span>
+    <span class="rule"></span>
+    <img src="assets/pre-mark-navy-on-cream.png" alt="PRE">
+    <span class="rule"></span>
+    <span class="tag">The Reach We Deliver</span>
+  </footer>
+</div>
+
+<script>
+window.WIZARD = {
+  kicker: "Transaction Services · Referral",
+  title: "Outgoing referral",
+  intro: "Sending a client to an agent outside our market? We'll paper the referral agreement so your fee is protected.",
+  sampleDocs: ["Referral Agreement.pdf", "Client Contact Sheet.pdf"],
+  confirmIntro: "We read your Referral Agreement and the client contact sheet. Confirm what we found and fill in what we couldn't.",
+  confirmFields: [
+    { id: "client",       label: "Client name",  type: "text", value: "Dana Kowalski", source: "Client Contact Sheet", required: true },
+    { id: "client_phone", label: "Client phone", type: "text", value: "(218) 555-0142", source: "Client Contact Sheet", required: true },
+    { id: "client_email", label: "Client email", type: "text", value: "dana.kowalski@example.com", source: "Client Contact Sheet", required: true },
+    { id: "market",       label: "Destination market", type: "text", value: "Scottsdale, AZ", source: "Referral Agreement", required: true },
+    { id: "fee",          label: "Referral fee", type: "text", value: "", sourceBlank: true, required: true, hint: "We couldn't find the fee in your documents. Percentage or flat amount." }
+  ],
+  questions: [
+    { id: "recv_agent",     label: "Receiving agent name", type: "text", required: true },
+    { id: "recv_brokerage", label: "Receiving brokerage", type: "text", required: true },
+    { id: "side", label: "What is the client doing in the new market?", type: "choice", options: ["Buying", "Selling", "Both"], required: true },
+    { id: "introduced", label: "Have you already introduced the client to the receiving agent?", type: "choice", options: ["Yes", "No"], required: true,
+      reveals: { "No": [
+        { id: "intro_time", label: "Best time for an introduction call", type: "text", required: true, hint: "e.g. Weekday evenings after 6pm Central" }
+      ]}},
+    { id: "notes", label: "Anything the receiving agent should know about this client?", type: "textarea", required: false }
+  ],
+  stats: { asked: 3, instead: 15 },
+  successTitle: "Referral sent",
+  successBody: "We'll route the signed referral agreement to the receiving brokerage and confirm your fee in writing."
+};
+</script>
+<script src="js/confetti.js"></script>
+<script src="js/wizard.js"></script>
+</body>
+</html>

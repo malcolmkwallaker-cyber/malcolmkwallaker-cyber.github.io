@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Listing Under Contract — Pemberton Company Hub</title>
+<link rel="icon" href="assets/logo-mark-navy-on-cream.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/hub.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="site-header">
+    <a class="lockup" href="index.html">
+      <img src="assets/logo-mark-navy-on-cream.png" alt="Pemberton Real Estate mark">
+      <span class="name">Pemberton <span>Real Estate</span></span>
+    </a>
+    <nav>
+      <a href="index.html">Hub</a>
+      <a href="transaction-services.html" class="active">Transactions</a>
+      <a href="listing-marketing.html">Marketing</a>
+      <a href="policies.html">Policies</a>
+      <a href="office-exclusives.html">Exclusives</a>
+    </nav>
+  </header>
+
+  <div id="wizard-head"></div>
+  <div id="wizard-root"></div>
+
+  <footer class="footer-band">
+    <span class="tag">The Standard We Hold</span>
+    <span class="rule"></span>
+    <img src="assets/pre-mark-navy-on-cream.png" alt="PRE">
+    <span class="rule"></span>
+    <span class="tag">The Reach We Deliver</span>
+  </footer>
+</div>
+
+<script>
+window.WIZARD = {
+  kicker: "Transaction Services · Listing",
+  title: "Listing under contract",
+  intro: "Your listing has an accepted offer. Drop in the executed paperwork and we'll move the file from active to pending.",
+  sampleDocs: ["Purchase Agreement.pdf", "Listing Agreement.pdf", "Addendum A.pdf"],
+  confirmIntro: "We read the executed Purchase Agreement, your Listing Agreement and Addendum A. Confirm what we found and fill in what we couldn't.",
+  confirmFields: [
+    { id: "address",  label: "Property address", type: "text", value: "1420 Cedar Ridge Dr, Grand Rapids, MN 55744", source: "Listing Agreement", required: true },
+    { id: "buyers",   label: "Buyer name(s)",    type: "text", value: "Priya Natarajan", source: "Purchase Agreement", required: true },
+    { id: "price",    label: "Accepted price",   type: "text", value: "$408,000", source: "Purchase Agreement", required: true },
+    { id: "closing",  label: "Closing date",     type: "date", value: "2026-09-30", source: "Purchase Agreement", required: true },
+    { id: "earnest",  label: "Earnest money",    type: "text", value: "$8,000", source: "Addendum A", required: true },
+    { id: "yearbuilt",label: "Year built",       type: "text", value: "", sourceBlank: true, required: true, hint: "We couldn't find this in your documents." }
+  ],
+  questions: [
+    { id: "coordination", label: "How much coordination do you want on this file?", type: "choice", options: ["Full coordination", "Compliance only"], required: true,
+      reveals: { "Full coordination": [
+        { id: "title_co",   label: "Preferred title company", type: "text", required: true },
+        { id: "inspection", label: "Inspection date (if scheduled)", type: "date", required: false }
+      ]}},
+    { id: "hoa", label: "Is the property in an HOA?", type: "choice", options: ["Yes", "No"], required: true,
+      reveals: { "Yes": [
+        { id: "hoa_docs_date", label: "Date HOA documents were provided", type: "date", required: true }
+      ]}},
+    { id: "referral", label: "Is there a referral fee on this transaction?", type: "choice", options: ["Yes", "No"], required: true,
+      reveals: { "Yes": [
+        { id: "referral_amount",    label: "Referral fee amount", type: "text", required: true },
+        { id: "referral_agent",     label: "Referring agent name", type: "text", required: true },
+        { id: "referral_brokerage", label: "Referring brokerage", type: "text", required: true }
+      ]}},
+    { id: "notes", label: "Anything the coordinator should know?", type: "textarea", required: false }
+  ],
+  stats: { asked: 4, instead: 24 },
+  successTitle: "File moved to pending",
+  successBody: "We'll update the MLS status, build the deadline calendar, and keep your sellers in the loop through closing."
+};
+</script>
+<script src="js/confetti.js"></script>
+<script src="js/wizard.js"></script>
+</body>
+</html>

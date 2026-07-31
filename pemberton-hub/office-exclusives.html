@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Office Exclusives — Pemberton Company Hub</title>
+<link rel="icon" href="assets/logo-mark-navy-on-cream.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/hub.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="site-header">
+    <a class="lockup" href="index.html">
+      <img src="assets/logo-mark-navy-on-cream.png" alt="Pemberton Real Estate mark">
+      <span class="name">Pemberton <span>Real Estate</span></span>
+    </a>
+    <nav>
+      <a href="index.html">Hub</a>
+      <a href="transaction-services.html">Transactions</a>
+      <a href="listing-marketing.html">Marketing</a>
+      <a href="policies.html">Policies</a>
+      <a href="office-exclusives.html" class="active">Exclusives</a>
+    </nav>
+  </header>
+
+  <p class="kicker orange">Internal only</p>
+  <h1>Office Exclusives</h1>
+  <p class="lede">In-house listings before they hit the MLS. Match a buyer, call the listing agent directly. Do not advertise these publicly — see the <a href="policies.html#exclusives">Office Exclusives policy</a>.</p>
+
+  <div class="card">
+    <div class="filters">
+      <div class="field"><label>Search</label><input type="search" id="f-search" placeholder="Address, area, feature…"></div>
+      <div class="field"><label>Property type</label>
+        <select id="f-type"><option value="">All</option><option>Single family</option><option>Cabin / lake home</option><option>Townhome</option><option>Land</option></select>
+      </div>
+      <div class="field"><label>Beds</label>
+        <select id="f-beds"><option value="">Any</option><option>1+</option><option>2+</option><option>3+</option><option>4+</option></select>
+      </div>
+      <div class="field"><label>Baths</label>
+        <select id="f-baths"><option value="">Any</option><option>1+</option><option>2+</option><option>3+</option></select>
+      </div>
+      <div class="field"><label>Agent</label>
+        <select id="f-agent"><option value="">All</option><option>Malcolm Wallaker</option><option>Parker Pemberton</option><option>Renee Aldous</option><option>Tom Skerritt</option></select>
+      </div>
+    </div>
+
+    <div class="table-scroll">
+      <table class="listings" id="ex-table">
+        <thead><tr>
+          <th>Address</th><th>Type</th><th>Beds</th><th>Baths</th><th>Price</th><th>Agent</th><th>Status</th>
+        </tr></thead>
+        <tbody>
+          <tr><td>1420 Cedar Ridge Dr, Grand Rapids</td><td>Single family</td><td>4</td><td>3</td><td class="price">$415,000</td><td>Malcolm Wallaker</td><td>Coming soon</td></tr>
+          <tr><td>2960 Pokegama Point Rd, Grand Rapids</td><td>Cabin / lake home</td><td>3</td><td>2</td><td class="price">$589,000</td><td>Parker Pemberton</td><td>Exclusive</td></tr>
+          <tr><td>115 Sylvan Ct, Cohasset</td><td>Townhome</td><td>2</td><td>2</td><td class="price">$232,500</td><td>Renee Aldous</td><td>Exclusive</td></tr>
+          <tr><td>TBD Scenic Hwy 7 (40 ac), Bovey</td><td>Land</td><td>0</td><td>0</td><td class="price">$189,000</td><td>Tom Skerritt</td><td>Exclusive</td></tr>
+          <tr><td>804 Crystal Springs Ln, Grand Rapids</td><td>Single family</td><td>3</td><td>2</td><td class="price">$339,900</td><td>Malcolm Wallaker</td><td>Coming soon</td></tr>
+          <tr><td>18755 Wabana Shores Dr, Grand Rapids</td><td>Cabin / lake home</td><td>4</td><td>3</td><td class="price">$742,000</td><td>Parker Pemberton</td><td>Exclusive</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="lede" id="ex-empty" style="display:none;margin-top:16px">No exclusives match those filters.</p>
+  </div>
+
+  <footer class="footer-band">
+    <span class="tag">The Standard We Hold</span>
+    <span class="rule"></span>
+    <img src="assets/pre-mark-navy-on-cream.png" alt="PRE">
+    <span class="rule"></span>
+    <span class="tag">The Reach We Deliver</span>
+  </footer>
+</div>
+
+<script>
+(function () {
+  var q = document.getElementById("f-search");
+  var type = document.getElementById("f-type");
+  var beds = document.getElementById("f-beds");
+  var baths = document.getElementById("f-baths");
+  var agent = document.getElementById("f-agent");
+  var rows = Array.prototype.slice.call(document.querySelectorAll("#ex-table tbody tr"));
+
+  function apply() {
+    var shown = 0;
+    rows.forEach(function (r) {
+      var c = r.cells;
+      var ok = true;
+      if (q.value.trim() && r.textContent.toLowerCase().indexOf(q.value.trim().toLowerCase()) === -1) ok = false;
+      if (type.value && c[1].textContent !== type.value) ok = false;
+      if (beds.value && Number(c[2].textContent) < parseInt(beds.value)) ok = false;
+      if (baths.value && Number(c[3].textContent) < parseInt(baths.value)) ok = false;
+      if (agent.value && c[5].textContent !== agent.value) ok = false;
+      r.style.display = ok ? "" : "none";
+      if (ok) shown++;
+    });
+    document.getElementById("ex-empty").style.display = shown ? "none" : "";
+  }
+  [q, type, beds, baths, agent].forEach(function (el) {
+    el.addEventListener("input", apply);
+    el.addEventListener("change", apply);
+  });
+})();
+</script>
+</body>
+</html>

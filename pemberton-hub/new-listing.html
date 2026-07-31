@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>New Listing — Pemberton Company Hub</title>
+<link rel="icon" href="assets/logo-mark-navy-on-cream.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;600;700&family=Playfair+Display:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/hub.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="site-header">
+    <a class="lockup" href="index.html">
+      <img src="assets/logo-mark-navy-on-cream.png" alt="Pemberton Real Estate mark">
+      <span class="name">Pemberton <span>Real Estate</span></span>
+    </a>
+    <nav>
+      <a href="index.html">Hub</a>
+      <a href="transaction-services.html" class="active">Transactions</a>
+      <a href="listing-marketing.html">Marketing</a>
+      <a href="policies.html">Policies</a>
+      <a href="office-exclusives.html">Exclusives</a>
+    </nav>
+  </header>
+
+  <div id="wizard-head"></div>
+  <div id="wizard-root"></div>
+
+  <footer class="footer-band">
+    <span class="tag">The Standard We Hold</span>
+    <span class="rule"></span>
+    <img src="assets/pre-mark-navy-on-cream.png" alt="PRE">
+    <span class="rule"></span>
+    <span class="tag">The Reach We Deliver</span>
+  </footer>
+</div>
+
+<script>
+window.WIZARD = {
+  kicker: "Transaction Services · Listing",
+  title: "New listing",
+  intro: "Signed listing agreement to live on the MLS. Upload the paperwork and tell us how you want it marketed.",
+  sampleDocs: ["Listing Agreement.pdf", "Seller Property Disclosure.pdf", "County Tax Record.pdf"],
+  confirmIntro: "We read your Listing Agreement, Seller Disclosure and the county tax record. Confirm what we found and fill in what we couldn't.",
+  confirmFields: [
+    { id: "address",   label: "Property address", type: "text", value: "1420 Cedar Ridge Dr, Grand Rapids, MN 55744", source: "Listing Agreement", required: true },
+    { id: "sellers",   label: "Seller name(s)",   type: "text", value: "Robert & Ellen Marsh", source: "Listing Agreement", required: true },
+    { id: "listprice", label: "List price",       type: "text", value: "$415,000", source: "Listing Agreement", required: true },
+    { id: "expires",   label: "Listing expiration", type: "date", value: "2027-01-31", source: "Listing Agreement", required: true },
+    { id: "taxid",     label: "Parcel / tax ID",  type: "text", value: "91-020-1140", source: "County Tax Record", required: true },
+    { id: "yearbuilt", label: "Year built",       type: "text", value: "", sourceBlank: true, required: true, hint: "We couldn't find this in your documents." }
+  ],
+  questions: [
+    { id: "mls_live", label: "When should this listing go live on the MLS?", type: "date", required: true },
+    { id: "remarks",  label: "Public remarks — what should buyers notice first?", type: "textarea", required: true,
+      hint: "We'll polish the wording; just give us the highlights." },
+    { id: "access", label: "How will showings access the home?", type: "choice",
+      options: ["Combo lockbox", "Electronic lockbox", "Appointment only"], required: true,
+      reveals: { "Combo lockbox": [
+        { id: "lockbox_code", label: "Lockbox combination", type: "text", required: true }
+      ]}},
+    { id: "hoa", label: "Is the property in an HOA?", type: "choice", options: ["Yes", "No"], required: true,
+      reveals: { "Yes": [
+        { id: "hoa_docs_date", label: "Date HOA documents were provided", type: "date", required: true }
+      ]}},
+    { id: "referral", label: "Is there a referral fee on this listing?", type: "choice", options: ["Yes", "No"], required: true,
+      reveals: { "Yes": [
+        { id: "referral_amount",    label: "Referral fee amount", type: "text", required: true },
+        { id: "referral_agent",     label: "Referring agent name", type: "text", required: true },
+        { id: "referral_brokerage", label: "Referring brokerage", type: "text", required: true }
+      ]}}
+  ],
+  stats: { asked: 5, instead: 32 },
+  successTitle: "Listing in motion",
+  successBody: "We'll build the MLS draft and send it for your approval before the live date. Want photos? Order them under Listing Marketing."
+};
+</script>
+<script src="js/confetti.js"></script>
+<script src="js/wizard.js"></script>
+</body>
+</html>
