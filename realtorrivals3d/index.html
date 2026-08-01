@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Realtor Rivals: Lake Country — 3D Prototype</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🏠</text></svg>">
+<style>
+  :root {
+    --ink:#1a1c2c; --purple:#5d275d; --red:#b13e53; --orange:#ef7d57;
+    --yellow:#ffcd75; --lime:#a7f070; --green:#38b764; --teal:#257179;
+    --navy:#29366f; --blue:#3b5dc9; --sky:#41a6f6; --cyan:#73eff7;
+    --white:#f4f4f4; --gray:#94b0c2; --slate:#566c86; --dusk:#333c57;
+  }
+  html, body {
+    margin:0; padding:0; height:100%; height:100dvh; background:var(--ink);
+    overflow:hidden; font-family:"Courier New", monospace;
+    touch-action:none; overscroll-behavior:none;
+    -webkit-user-select:none; user-select:none; -webkit-touch-callout:none;
+    -webkit-tap-highlight-color:transparent; position:fixed; inset:0; width:100%;
+  }
+  #game { position:absolute; inset:0; width:100%; height:100%; display:block; touch-action:none; }
+  .hud { position:absolute; z-index:5; pointer-events:none; color:var(--white);
+    text-shadow:1px 1px 0 rgba(26,28,44,.9); }
+  #topleft { top:calc(10px + env(safe-area-inset-top)); left:calc(12px + env(safe-area-inset-left)); font-size:14px; line-height:1.5; }
+  #topleft .cash { color:var(--yellow); font-size:20px; font-weight:bold; }
+  #topleft .who { color:var(--lime); font-weight:bold; letter-spacing:1px; }
+  #clock { color:var(--gray); }
+  #energypips { display:flex; gap:4px; margin-top:2px; }
+  #energypips .pip { width:10px; height:10px; border-radius:50%; border:1px solid var(--slate); background:transparent; }
+  #energypips .pip.on { background:var(--yellow); border-color:var(--yellow); }
+  #minimap { position:absolute; z-index:5; top:calc(10px + env(safe-area-inset-top)); right:calc(12px + env(safe-area-inset-right));
+    width:180px; height:130px; border:2px solid var(--dusk); border-radius:6px;
+    background:rgba(26,28,44,.75); }
+  #compass { position:absolute; z-index:5; top:calc(148px + env(safe-area-inset-top)); right:calc(12px + env(safe-area-inset-right));
+    width:180px; display:none; align-items:center; justify-content:center; gap:6px;
+    background:rgba(26,28,44,.75); border:2px solid var(--lime); border-radius:6px; padding:4px 8px;
+    color:var(--lime); font-size:11px; }
+  #compassarrow { display:inline-block; transition:transform .1s linear; font-size:16px; }
+  #prompt { bottom:calc(96px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%);
+    background:rgba(26,28,44,.85); border:2px solid var(--yellow); color:var(--yellow);
+    padding:6px 14px; border-radius:6px; font-size:15px; font-weight:bold; display:none; }
+  #toasts { bottom:calc(46px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%);
+    display:flex; flex-direction:column; gap:6px; align-items:center; width:min(92vw,560px); }
+  .toast { background:rgba(26,28,44,.92); border:2px solid var(--sky); color:var(--white);
+    padding:6px 12px; border-radius:6px; font-size:13px; text-align:center;
+    animation:toastIn .25s ease-out; max-width:100%; }
+  .toast.good { border-color:var(--lime); } .toast.bad { border-color:var(--red); }
+  .toast.cash { border-color:var(--yellow); color:var(--yellow); font-weight:bold; }
+  @keyframes toastIn { from { opacity:0; transform:translateY(10px);} to { opacity:1; transform:none; } }
+  #hint { bottom:calc(8px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%);
+    color:var(--slate); font-size:11px; white-space:nowrap; }
+  /* phone toggle button */
+  #phonebtn { position:absolute; z-index:6; right:calc(12px + env(safe-area-inset-right)); bottom:calc(8px + env(safe-area-inset-bottom));
+    background:rgba(26,28,44,.85); border:2px solid var(--sky); color:var(--sky); font-family:inherit;
+    font-weight:bold; font-size:12px; border-radius:6px; padding:6px 12px; cursor:pointer; }
+  /* overlays */
+  .overlay { position:absolute; inset:0; z-index:20; display:flex; align-items:center; justify-content:center;
+    background:rgba(26,28,44,.82); color:var(--white); }
+  .panel { background:var(--ink); border:3px solid var(--slate); border-radius:10px;
+    padding:22px 26px; max-width:min(92vw, 640px); max-height:90vh; overflow-y:auto; text-align:center; }
+  .panel h1 { color:var(--yellow); font-size:26px; margin:0 0 4px; letter-spacing:2px; }
+  .panel h2 { color:var(--sky); font-size:14px; margin:0 0 14px; font-weight:normal; }
+  .panel p { color:var(--gray); font-size:13px; line-height:1.55; }
+  #continuenote { color:var(--lime); font-size:12px; min-height:1.4em; }
+  .chars, .diffs { display:flex; gap:14px; justify-content:center; margin:14px 0; flex-wrap:wrap; }
+  .charcard, .diffcard { border:3px solid var(--dusk); border-radius:8px; padding:12px 14px; cursor:pointer;
+    width:200px; text-align:left; background:rgba(51,60,87,.35); }
+  .charcard:hover, .charcard.sel, .diffcard:hover, .diffcard.sel { border-color:var(--yellow); background:rgba(51,60,87,.7); }
+  .charcard .nm, .diffcard .nm { font-size:17px; font-weight:bold; color:var(--yellow); }
+  .charcard .ti { color:var(--sky); font-size:11px; margin-bottom:6px; }
+  .diffcard .ti { color:var(--gray); font-size:11px; }
+  .charcard .st { color:var(--lime); font-size:11px; line-height:1.5; }
+  .bigbtn { display:inline-block; margin-top:12px; background:var(--green); color:var(--ink);
+    font-family:inherit; font-weight:bold; font-size:16px; border:0; border-radius:8px;
+    padding:10px 30px; cursor:pointer; letter-spacing:1px; }
+  .bigbtn:hover { background:var(--lime); }
+  .smallbtn { font-family:inherit; background:var(--dusk); color:var(--white); border:2px solid var(--slate);
+    border-radius:6px; padding:6px 14px; cursor:pointer; font-size:12px; }
+  .smallbtn:hover { border-color:var(--yellow); }
+  /* minigame */
+  #mg { display:none; }
+  #mgbarwrap { width:min(80vw,420px); height:34px; border:3px solid var(--slate); border-radius:8px;
+    position:relative; margin:16px auto 6px; background:var(--dusk); overflow:hidden; }
+  #mgzone { position:absolute; top:0; bottom:0; background:var(--green); opacity:.85; }
+  #mgneedle { position:absolute; top:-2px; bottom:-2px; width:4px; background:var(--white); }
+  #mgtitle { color:var(--yellow); font-size:16px; font-weight:bold; }
+  #mginfo { color:var(--gray); font-size:12px; }
+  /* office action menu */
+  #actionmenu { display:none; }
+  #actionmenu .panel { max-width:360px; }
+  .actionbtn { display:block; width:100%; box-sizing:border-box; margin:8px 0; background:var(--dusk);
+    border:2px solid var(--slate); color:var(--white); font-family:inherit; text-align:left;
+    padding:10px 14px; border-radius:8px; cursor:pointer; }
+  .actionbtn:hover { border-color:var(--yellow); }
+  .actionbtn .nm { color:var(--yellow); font-weight:bold; font-size:14px; }
+  .actionbtn .ti { color:var(--gray); font-size:11px; margin-top:2px; }
+  /* follow-up dialogue */
+  #dlg { display:none; }
+  #dlg .panel { max-width:min(90vw, 520px); }
+  #dlgwho { color:var(--sky); font-size:12px; letter-spacing:1px; margin-bottom:6px; }
+  #dlgmsg { color:var(--white); font-size:15px; line-height:1.5; margin-bottom:14px; }
+  #dlgchoices { display:flex; flex-direction:column; gap:8px; }
+  .dlgbtn { font-family:inherit; background:var(--dusk); border:2px solid var(--slate); color:var(--white);
+    border-radius:8px; padding:10px 12px; cursor:pointer; font-size:13px; text-align:left; }
+  .dlgbtn:hover { border-color:var(--lime); }
+  /* phone panel */
+  #phone { position:absolute; z-index:15; left:0; right:0; bottom:0; height:78%;
+    background:var(--ink); border-top:3px solid var(--slate); border-radius:14px 14px 0 0;
+    transform:translateY(100%); transition:transform .25s ease-out; display:flex; flex-direction:column;
+    padding:14px 16px calc(14px + env(safe-area-inset-bottom)); box-sizing:border-box; color:var(--white); }
+  #phone.open { transform:translateY(0); }
+  #phonehead { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:8px; }
+  #phonehead .row1 { color:var(--yellow); font-weight:bold; font-size:15px; }
+  #phonehead .row2 { color:var(--gray); font-size:11px; margin-top:2px; }
+  #phoneenergy { color:var(--lime); font-size:11px; }
+  #phoneability { color:var(--sky); font-weight:bold; font-size:12px; margin-top:8px; }
+  #phoneabilitydesc { color:var(--slate); font-size:10px; margin-bottom:8px; }
+  #pipelinehead { color:var(--gray); font-size:11px; margin:6px 0 4px; letter-spacing:1px; }
+  #pipelinelist { flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:6px; }
+  .plempty { color:var(--slate); font-size:12px; padding:20px 0; text-align:center; }
+  .plrow { display:flex; align-items:center; gap:8px; background:rgba(51,60,87,.3); border:2px solid var(--dusk);
+    border-radius:6px; padding:6px 8px; cursor:pointer; }
+  .plrow.sel { border-color:var(--lime); background:rgba(167,240,112,.12); }
+  .plstage { font-size:9px; font-weight:bold; padding:3px 6px; border-radius:4px; color:var(--ink); white-space:nowrap; }
+  .plstage.stage-new { background:var(--gray); } .plstage.stage-hot { background:var(--orange); } .plstage.stage-appt { background:var(--yellow); }
+  .plmain { flex:1; min-width:0; }
+  .plname { font-size:12px; }
+  .plbar { height:5px; background:var(--dusk); border-radius:3px; overflow:hidden; margin-top:3px; }
+  .plfill { height:100%; background:var(--lime); }
+  .plvalue { color:var(--yellow); font-size:12px; white-space:nowrap; }
+  #phonefoot { display:flex; justify-content:space-between; gap:8px; margin-top:10px; }
+  /* touch controls */
+  .tc { position:absolute; z-index:10; display:none; }
+  #stick { left:calc(18px + env(safe-area-inset-left)); bottom:calc(24px + env(safe-area-inset-bottom));
+    width:120px; height:120px; border-radius:50%; border:2px solid rgba(148,176,194,.5);
+    background:rgba(26,28,44,.35); }
+  #knob { position:absolute; left:50%; top:50%; width:52px; height:52px; border-radius:50%;
+    background:rgba(148,176,194,.55); transform:translate(-50%,-50%); }
+  #abtn { right:calc(22px + env(safe-area-inset-right)); bottom:calc(96px + env(safe-area-inset-bottom));
+    width:74px; height:74px; border-radius:50%; border:2px solid var(--yellow);
+    background:rgba(255,205,117,.25); color:var(--yellow); font-weight:bold; font-size:13px;
+    display:none; align-items:center; justify-content:center; font-family:inherit; }
+  body.touch #stick, body.touch #abtn { display:flex; }
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div class="hud" id="topleft">
+  <div class="who" id="hudwho">—</div>
+  <div class="cash" id="hudcash">$0</div>
+  <div id="hudsold">SOLD: 0 · <span style="color:var(--sky)">FOLLOWERS: 150</span></div>
+  <div id="clock">APRIL · DAY 1 · 8:00 AM</div>
+  <div id="energypips"></div>
+</div>
+<canvas id="minimap" width="360" height="260"></canvas>
+<div id="compass"><span id="compassarrow">▲</span><span id="compassdist"></span></div>
+<div class="hud" id="prompt"></div>
+<div class="hud" id="toasts"></div>
+<div class="hud" id="hint">WASD DRIVE/WALK · E ACTION · P PHONE · SPACE BRAKE · M MUTE</div>
+<button id="phonebtn">☎ PHONE (P)</button>
+
+<div class="tc" id="stick"><div id="knob"></div></div>
+<div class="tc" id="abtn">ACTION</div>
+
+<div id="phone">
+  <div id="phonehead">
+    <div>
+      <div class="row1" id="phonecash">$0</div>
+      <div class="row2" id="phonediff">STANDARD · APRIL DAY 1/8</div>
+      <div id="phoneenergy">ENERGY 3/3</div>
+    </div>
+    <button class="smallbtn" id="phoneclose">CLOSE ✕</button>
+  </div>
+  <div id="phoneability">ABILITY</div>
+  <div id="phoneabilitydesc"></div>
+  <div id="pipelinehead">PIPELINE — TAP A LEAD TO SET AS GPS TARGET</div>
+  <div id="pipelinelist"></div>
+  <div id="phonefoot">
+    <span style="color:var(--slate);font-size:10px;align-self:center">Tap a lead again to clear the target.</span>
+    <button class="smallbtn" id="endday" style="border-color:var(--orange);color:var(--orange)">END DAY →</button>
+  </div>
+</div>
+
+<div class="overlay" id="title">
+  <div class="panel">
+    <h1>REALTOR RIVALS</h1>
+    <h2>LAKE COUNTRY — open-world 3D prototype (Phases 1–4)</h2>
+    <p>Northern Minnesota is yours to drive. Leads are waiting at houses across the map
+      — find the glowing beacons, warm them up, set the appointment, and close before your
+      rival swoops in with full-size caramel rolls.</p>
+    <div id="continuenote"></div>
+    <div class="chars" id="chars"></div>
+    <div class="diffs" id="diffs"></div>
+    <button class="bigbtn" id="startbtn">START SELLING</button>
+    <p style="font-size:11px;color:var(--slate)">Full open-world build plan in docs/ — this prototype proves the world, driving, pipeline sim, and deal loop.</p>
+  </div>
+</div>
+
+<div class="overlay" id="mg">
+  <div class="panel">
+    <div id="mgtitle">THE PITCH</div>
+    <div id="mginfo">Stop the needle in the green to win them over.</div>
+    <div id="mgbarwrap"><div id="mgzone"></div><div id="mgneedle"></div></div>
+    <div style="color:var(--slate);font-size:11px">E / SPACE / TAP</div>
+  </div>
+</div>
+
+<div class="overlay" id="actionmenu">
+  <div class="panel">
+    <h1 style="font-size:18px">THE OFFICE</h1>
+    <p style="margin-top:0">Pick an action — each costs 1 energy and works the whole pipeline at once.</p>
+    <button class="actionbtn" id="officecall"><div class="nm">CALL LEADS</div><div class="ti">Dial for dollars. Warms up to 3 leads.</div></button>
+    <button class="actionbtn" id="officetext"><div class="nm">TEXT LEADS</div><div class="ti">Thumbs of fury. Faster, trickier, up to 4 leads.</div></button>
+    <button class="smallbtn" id="officeclose" style="margin-top:6px">CANCEL</button>
+  </div>
+</div>
+
+<div class="overlay" id="dlg">
+  <div class="panel">
+    <div id="dlgwho">FOLLOW UP</div>
+    <div id="dlgmsg"></div>
+    <div id="dlgchoices"></div>
+  </div>
+</div>
+
+<script type="importmap">{ "imports": { "three": "./lib/three.module.min.js" } }</script>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
