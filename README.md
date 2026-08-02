@@ -4,6 +4,7 @@
 
 - [OpenMontage — Overview & Field Notes](https://malcolmkwallaker-cyber.github.io/openmontage/) — an independent look at the open-source agentic video production system.
 - [Land Reel](https://malcolmkwallaker-cyber.github.io/landreel/) — turn vacant-land photos into a vertical listing reel (Ken Burns motion, a whip transition, and an AI rendering of the finished home), entirely in your browser. No uploads, no accounts.
+- `steadfast-hub/` — a frozen demo copy of the Steadfast Real Estate Co. intranet. The actively maintained version lives in the [`steadfast-systems`](https://github.com/malcolmkwallaker-cyber/steadfast-systems) repo — see `steadfast-hub/README.md` before editing anything here.
 
 ## Vacant-land listing reel pipeline
 
