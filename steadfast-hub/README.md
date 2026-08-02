@@ -1,5 +1,7 @@
 # Steadfast Real Estate Co. Hub
 
+> **This is a frozen demo copy.** The actively maintained version now lives at [`steadfast-systems/technology/steadfast-hub`](https://github.com/malcolmkwallaker-cyber/steadfast-systems/tree/main/technology/steadfast-hub). Make changes there, not here — this copy stays in place only because it may already be linked to; treat it as read-only.
+
 The Steadfast Real Estate Co. company hub — a static intranet site the team can host, study and extend. Styled after the Steadfast Media design system (near-black + gold + cream, pennant flag mark).
 
 Pure HTML/CSS/JS — no build step. Open `index.html` or serve the folder with any static server.
